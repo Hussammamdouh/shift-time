@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Shift Time — Personal</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Lock screen (shown on load if passcode is set) -->
+  <div id="lockOverlay" class="overlay hidden" aria-modal="true" role="dialog">
+    <div class="overlay-card">
+      <h2 class="overlay-title">Enter Passcode</h2>
+      <div class="code-dots" id="unlockDots" aria-label="passcode dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      <div class="numpad" data-target="unlock"></div>
+      <div class="overlay-actions">
+        <button class="btn btn-ghost" id="unlockClear">Clear</button>
+      </div>
+      <div class="overlay-note" id="unlockMsg"></div>
+    </div>
+  </div>
+
+  <!-- Set/Change passcode modal -->
+  <div id="setPassModal" class="overlay hidden" aria-modal="true" role="dialog">
+    <div class="overlay-card">
+      <h2 class="overlay-title" id="setPassTitle">Set Passcode</h2>
+      <p class="overlay-sub">Enter a 4–8 digit numeric code</p>
+      <div class="code-dots" id="setDots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      <div class="numpad" data-target="set"></div>
+      <div class="overlay-actions">
+        <button class="btn btn-ghost" id="setClear">Clear</button>
+        <button class="btn" id="setConfirm">Save</button>
+      </div>
+      <div class="overlay-note" id="setMsg"></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <div class="logo">⏱</div>
+        <div>
+          <h1>Shift Time — Personal</h1>
+          <p class="sub">Dark, offline, with stopwatch + manual, reporting & lock.</p>
+        </div>
+      </div>
+
+      <div class="top-controls">
+        <label class="switch">
+          <input type="checkbox" id="fmtToggle" />
+          <span>24-hour</span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="pureBlackToggle" />
+          <span>Pure Black</span>
+        </label>
+        <button class="btn-ghost btn" id="settingsBtn" title="Settings">Settings</button>
+      </div>
+    </header>
+
+    <main class="card" role="main">
+      <!-- Tabs -->
+      <nav class="tabs">
+        <button class="tab active" id="tabWatch" type="button">Stopwatch</button>
+        <button class="tab" id="tabManual" type="button">Manual</button>
+        <button class="tab" id="tabReport" type="button">Reporting</button>
+      </nav>
+
+      <!-- STOPWATCH -->
+      <section class="section mode" id="modeWatch" aria-labelledby="tabWatch">
+        <div class="live">
+          <span class="pill">Device: <span class="clock" id="nowClock">--:--:--</span></span>
+          <span class="state" id="stateBadge">IDLE</span>
+          <span class="pill" id="tickerPill">Net —:—</span>
+        </div>
+
+        <div class="actions" style="margin-top:12px">
+          <button class="btn" id="btnStart" type="button">Start (S)</button>
+          <button class="btn" id="btnBreak" type="button">Break (B)</button>
+          <button class="btn" id="btnBack"  type="button">Back (K)</button>
+          <button class="btn" id="btnEnd"   type="button">End (E)</button>
+          <button class="btn btn-ghost" id="btnReset" type="button" title="Clear stopwatch data">Reset (R)</button>
+        </div>
+
+        <div class="grid g2" style="margin-top:14px">
+          <div>
+            <label for="watchStart">Start Time <span class="hint">auto</span></label>
+            <input type="time" id="watchStart" readonly />
+          </div>
+          <div>
+            <label for="watchEnd">End Time <span class="hint">auto</span></label>
+            <input type="time" id="watchEnd" readonly />
+          </div>
+        </div>
+
+        <div class="section sub-card">
+          <h3 class="h3">Recorded Breaks</h3>
+          <div class="breaks-list" id="watchBreaksList"></div>
+          <div class="foot-note">Active break shows live duration. Subtle sound on Break/Back.</div>
+        </div>
+      </section>
+
+      <!-- MANUAL -->
+      <section class="section mode hidden" id="modeManual" aria-labelledby="tabManual">
+        <div class="grid g2">
+          <div>
+            <label for="startTime">Start Time</label>
+            <input type="time" id="startTime" />
+          </div>
+          <div>
+            <label for="endTime">End Time <span class="hint">leave empty to get suggestion</span></label>
+            <input type="time" id="endTime" />
+          </div>
+        </div>
+
+        <div class="section sub-card">
+          <div class="breaks-head">
+            <h3 class="h3">Breaks</h3>
+            <div class="actions">
+              <button class="btn-ghost btn" id="addBreakBtn" type="button">+ Add Break</button>
+              <button class="btn-ghost btn" id="clearBreaksBtn" type="button">Clear Breaks</button>
+            </div>
+          </div>
+          <div id="breaks"></div>
+          <div class="foot-note">Type times, or save to history when done.</div>
+        </div>
+
+        <div class="actions" style="margin-top:10px">
+          <button class="btn" id="manualSave">Save to History</button>
+        </div>
+      </section>
+
+      <!-- SHARED CONTROLS -->
+      <section class="section">
+        <div class="grid g3">
+          <div>
+            <label for="targetHours">Daily Target (hours)</label>
+            <input type="number" id="targetHours" step="0.25" min="0" value="7" />
+          </div>
+          <div>
+            <label for="granularity">Rounding (minutes)</label>
+            <input type="number" id="granularity" step="1" min="1" value="1" />
+          </div>
+          <div>
+            <label for="hourlyRate">Hourly Rate</label>
+            <input type="number" id="hourlyRate" step="0.5" min="0" value="0" />
+          </div>
+        </div>
+        <div class="actions" style="margin-top:10px">
+          <button class="btn" id="calcBtn" type="button">Recalculate</button>
+          <span class="tag" id="statusTag">Idle</span>
+        </div>
+      </section>
+
+      <!-- SHARED RESULTS -->
+      <section class="section" aria-live="polite">
+        <div class="results" id="results" style="display:none">
+          <div class="kpis">
+            <div class="kpi"><div class="label">Raw Shift</div>      <div class="value" id="kpiRaw">—</div></div>
+            <div class="kpi"><div class="label">Total Breaks</div>   <div class="value" id="kpiBreaks">—</div></div>
+            <div class="kpi"><div class="label">Net Working</div>    <div class="value" id="kpiNet">—</div></div>
+            <div class="kpi"><div class="label">Target</div>         <div class="value" id="kpiTarget">—</div></div>
+            <div class="kpi"><div class="label">Remaining</div>      <div class="value" id="kpiRemain">—</div></div>
+            <div class="kpi"><div class="label">Overtime</div>       <div class="value" id="kpiOver">—</div></div>
+            <div class="kpi"><div class="label">Suggested End</div>  <div class="value" id="kpiSuggest">—</div></div>
+            <div class="kpi"><div class="label">Mode / State</div>   <div class="value" id="kpiState">—</div></div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div id="breakListRender"></div>
+          <div class="foot-note" id="endNote"></div>
+        </div>
+      </section>
+
+      <!-- REPORTING -->
+      <section class="section mode hidden" id="modeReport" aria-labelledby="tabReport">
+        <div class="grid g3">
+          <div>
+            <label for="reportSpan">Span</label>
+            <select id="reportSpan">
+              <option value="today">Today</option>
+              <option value="week">This Week</option>
+              <option value="month" selected>This Month</option>
+              <option value="all">All Time</option>
+            </select>
+          </div>
+          <div>
+            <label for="reportStart">Start (optional)</label>
+            <input type="date" id="reportStart">
+          </div>
+          <div>
+            <label for="reportEnd">End (optional)</label>
+            <input type="date" id="reportEnd">
+          </div>
+        </div>
+
+        <div class="results" style="margin-top:12px">
+          <div class="kpis">
+            <div class="kpi"><div class="label">Sessions</div> <div class="value" id="repSessions">—</div></div>
+            <div class="kpi"><div class="label">Total Net</div> <div class="value" id="repTotalNet">—</div></div>
+            <div class="kpi"><div class="label">Avg / Day</div> <div class="value" id="repAvgDay">—</div></div>
+            <div class="kpi"><div class="label">Earnings</div>  <div class="value" id="repEarnings">—</div></div>
+          </div>
+
+          <div class="divider"></div>
+          <div class="sub-card">
+            <h3 class="h3">History</h3>
+            <div id="historyTable" class="history-table"></div>
+          </div>
+
+          <div class="actions" style="margin-top:10px">
+            <button class="btn" id="btnExportCsv">Export CSV</button>
+            <button class="btn-ghost btn" id="btnPrint">Print</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- SETTINGS (passcode etc.) -->
+    <div id="settingsPanel" class="card settings hidden">
+      <div class="section">
+        <h3 class="h3">Security</h3>
+        <div class="actions">
+          <button class="btn" id="enablePass">Enable Passcode</button>
+          <button class="btn" id="changePass">Change Passcode</button>
+          <button class="btn btn-danger" id="disablePass">Disable Passcode</button>
+        </div>
+        <div class="foot-note">Numeric only (4–8 digits). Stored hashed in your browser.</div>
+      </div>
+      <div class="section">
+        <h3 class="h3">Nudges</h3>
+        <label class="switch"><input type="checkbox" id="notifToggle"><span>Notifications</span></label>
+        <label class="switch"><input type="checkbox" id="soundToggle"><span>Sound cues for Break/Back</span></label>
+        <label class="switch"><input type="checkbox" id="titleTickerToggle" checked><span>Title-bar ticker</span></label>
+        <div class="grid g2" style="margin-top:10px">
+          <div>
+            <label for="breakNudgeMin">Break nudge (minutes)</label>
+            <input type="number" id="breakNudgeMin" min="5" step="5" value="20" />
+          </div>
+          <div>
+            <label for="targetNudge">Target nudge</label>
+            <select id="targetNudge">
+              <option value="on" selected>On</option>
+              <option value="off">Off</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="actions">
+          <button class="btn" id="closeSettings">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
