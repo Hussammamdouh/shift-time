@@ -3,15 +3,19 @@
 <head>
   <meta charset="utf-8" />
   <title>Shift Time — Personal</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
 </head>
 <body>
-  <!-- Lock screen (shown on load if passcode is set) -->
+  <!-- ===== Lock screen (shown on load if passcode is set) ===== -->
   <div id="lockOverlay" class="overlay hidden" aria-modal="true" role="dialog">
     <div class="overlay-card">
       <h2 class="overlay-title">Enter Passcode</h2>
-      <div class="code-dots" id="unlockDots" aria-label="passcode dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      <div class="code-dots" id="unlockDots" aria-label="passcode dots">
+        <span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span>
+      </div>
       <div class="numpad" data-target="unlock"></div>
       <div class="overlay-actions">
         <button class="btn btn-ghost" id="unlockClear">Clear</button>
@@ -20,12 +24,15 @@
     </div>
   </div>
 
-  <!-- Set/Change passcode modal -->
+  <!-- ===== Set/Change passcode modal ===== -->
   <div id="setPassModal" class="overlay hidden" aria-modal="true" role="dialog">
     <div class="overlay-card">
       <h2 class="overlay-title" id="setPassTitle">Set Passcode</h2>
       <p class="overlay-sub">Enter a 4–8 digit numeric code</p>
-      <div class="code-dots" id="setDots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      <div class="code-dots" id="setDots">
+        <span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span>
+      </div>
       <div class="numpad" data-target="set"></div>
       <div class="overlay-actions">
         <button class="btn btn-ghost" id="setClear">Clear</button>
@@ -35,13 +42,80 @@
     </div>
   </div>
 
+  <!-- ===== Edit CURRENT stopwatch shift ===== -->
+  <div id="editCurrentModal" class="overlay hidden" aria-modal="true" role="dialog">
+    <div class="overlay-card">
+      <h2 class="overlay-title">Edit Current Shift</h2>
+      <div class="grid g2">
+        <div>
+          <label for="ecStartDT">Start</label>
+          <input type="datetime-local" id="ecStartDT" />
+        </div>
+        <div>
+          <label for="ecEndDT">End <span class="hint">(optional)</span></label>
+          <input type="datetime-local" id="ecEndDT" />
+        </div>
+      </div>
+
+      <div class="sub-card" style="margin-top:12px">
+        <div class="breaks-head">
+          <h3 class="h3">Breaks</h3>
+          <div class="actions">
+            <button class="btn-ghost btn" id="ecAddBreak" type="button">+ Add Break</button>
+          </div>
+        </div>
+        <div id="ecBreaks"></div>
+        <div class="foot-note">Use real date & time; we’ll auto-trim outside Start/End.</div>
+      </div>
+
+      <div class="overlay-actions">
+        <button class="btn-ghost" id="ecCancel">Cancel</button>
+        <button class="btn" id="ecSave">Apply</button>
+      </div>
+      <div class="overlay-note" id="ecMsg"></div>
+    </div>
+  </div>
+
+  <!-- ===== Edit a HISTORY record ===== -->
+  <div id="editHistoryModal" class="overlay hidden" aria-modal="true" role="dialog">
+    <div class="overlay-card">
+      <h2 class="overlay-title">Edit History Record</h2>
+      <div class="grid g2">
+        <div>
+          <label for="ehStartDT">Start</label>
+          <input type="datetime-local" id="ehStartDT" />
+        </div>
+        <div>
+          <label for="ehEndDT">End</label>
+          <input type="datetime-local" id="ehEndDT" />
+        </div>
+      </div>
+
+      <div class="sub-card" style="margin-top:12px">
+        <div class="breaks-head">
+          <h3 class="h3">Breaks</h3>
+          <div class="actions">
+            <button class="btn-ghost btn" id="ehAddBreak" type="button">+ Add Break</button>
+          </div>
+        </div>
+        <div id="ehBreaks"></div>
+      </div>
+
+      <div class="overlay-actions">
+        <button class="btn-ghost" id="ehCancel">Cancel</button>
+        <button class="btn" id="ehSave">Save</button>
+      </div>
+      <div class="overlay-note" id="ehMsg"></div>
+    </div>
+  </div>
+
   <div class="wrap">
     <header>
       <div class="title">
         <div class="logo">⏱</div>
         <div>
           <h1>Shift Time — Personal</h1>
-          <p class="sub">Dark, offline, with stopwatch + manual, reporting & lock.</p>
+          <p class="sub">Dark, offline, stopwatch + manual, reporting, lock & sync.</p>
         </div>
       </div>
 
@@ -64,6 +138,7 @@
         <button class="tab active" id="tabWatch" type="button">Stopwatch</button>
         <button class="tab" id="tabManual" type="button">Manual</button>
         <button class="tab" id="tabReport" type="button">Reporting</button>
+        <button class="tab" id="tabSync" type="button">Sync</button>
       </nav>
 
       <!-- STOPWATCH -->
@@ -80,6 +155,11 @@
           <button class="btn" id="btnBack"  type="button">Back (K)</button>
           <button class="btn" id="btnEnd"   type="button">End (E)</button>
           <button class="btn btn-ghost" id="btnReset" type="button" title="Clear stopwatch data">Reset (R)</button>
+
+          <!-- New edit buttons -->
+          <button class="btn btn-ghost" id="btnStartAt" type="button" title="Set a past start time">Start at…</button>
+          <button class="btn btn-ghost" id="btnEndAt"   type="button" title="Set a past end time">End at…</button>
+          <button class="btn btn-ghost" id="btnEditCurrent" type="button" title="Edit breaks for this run">Edit breaks…</button>
         </div>
 
         <div class="grid g2" style="margin-top:14px">
@@ -96,7 +176,7 @@
         <div class="section sub-card">
           <h3 class="h3">Recorded Breaks</h3>
           <div class="breaks-list" id="watchBreaksList"></div>
-          <div class="foot-note">Active break shows live duration. Subtle sound on Break/Back.</div>
+          <div class="foot-note">Active break shows live duration. Soft beep on Break/Back (optional).</div>
         </div>
       </section>
 
@@ -122,7 +202,7 @@
             </div>
           </div>
           <div id="breaks"></div>
-          <div class="foot-note">Type times, or save to history when done.</div>
+          <div class="foot-note">Works across midnight. When done, save to History.</div>
         </div>
 
         <div class="actions" style="margin-top:10px">
@@ -187,11 +267,11 @@
           </div>
           <div>
             <label for="reportStart">Start (optional)</label>
-            <input type="date" id="reportStart">
+            <input type="date" id="reportStart" />
           </div>
           <div>
             <label for="reportEnd">End (optional)</label>
-            <input type="date" id="reportEnd">
+            <input type="date" id="reportEnd" />
           </div>
         </div>
 
@@ -215,9 +295,62 @@
           </div>
         </div>
       </section>
+
+      <!-- SYNC (P2P via WebRTC + QR/manual offer/answer; passcode-gated) -->
+      <section class="section mode hidden" id="modeSync" aria-labelledby="tabSync">
+        <div class="sub-card">
+          <h3 class="h3">Secure Device Sync</h3>
+          <p class="foot-note">
+            Fetch your current shift & history to another device (phone/laptop) on demand.
+            Requires the correct passcode. Uses a direct P2P connection with QR/manual signaling — no server.
+          </p>
+
+          <div class="grid g3" style="margin-top:10px">
+            <div>
+              <label for="syncRole">Role</label>
+              <select id="syncRole">
+                <option value="host" selected>Host (this device)</option>
+                <option value="client">Client (other device)</option>
+              </select>
+            </div>
+            <div>
+              <label for="syncPass">Passcode</label>
+              <input type="password" inputmode="numeric" pattern="[0-9]*" id="syncPass" placeholder="Enter your numeric code" />
+            </div>
+            <div style="display:flex;align-items:end">
+              <button class="btn" id="syncStart">Start Sync</button>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="grid g2">
+            <div>
+              <label>Signal (share to the other device)</label>
+              <textarea id="syncOffer" class="codebox" rows="6" readonly></textarea>
+              <div class="actions" style="margin-top:6px">
+                <button class="btn-ghost btn" id="copyOffer">Copy</button>
+                <button class="btn-ghost btn" id="qrOffer">Show QR</button>
+              </div>
+              <canvas id="qrCanvas" class="qr hidden" width="240" height="240" aria-label="QR code"></canvas>
+            </div>
+            <div>
+              <label for="syncAnswer">Paste answer from other device</label>
+              <textarea id="syncAnswer" class="codebox" rows="6" placeholder="Paste here…"></textarea>
+              <div class="actions" style="margin-top:6px">
+                <button class="btn" id="acceptAnswer">Connect</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+          <div class="pill" id="syncStatus">Idle</div>
+          <div class="foot-note">Once connected, your phone can fetch the latest state anytime while the tab is open.</div>
+        </div>
+      </section>
     </main>
 
-    <!-- SETTINGS (passcode etc.) -->
+    <!-- SETTINGS -->
     <div id="settingsPanel" class="card settings hidden">
       <div class="section">
         <h3 class="h3">Security</h3>
@@ -255,6 +388,7 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <!-- JS modules (we will add these next) -->
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>
