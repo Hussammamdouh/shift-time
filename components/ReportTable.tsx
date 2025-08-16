@@ -79,8 +79,10 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
       
       const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
       const shifts: HistoryRec[] = [];
+      const existingShifts = snap.history; // Get existing shifts for duplicate detection
       
       console.log('CSV Headers detected:', headers);
+      console.log(`Checking for duplicates against ${existingShifts.length} existing shifts`);
       
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
@@ -174,6 +176,36 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
               continue;
             }
             
+            // Check for duplicates with existing shifts
+            const isDuplicate = existingShifts.some(existingShift => {
+              // Check for exact time match (within 1 minute tolerance)
+              const startDiff = Math.abs(existingShift.startMs - shift.startMs!);
+              const endDiff = Math.abs(existingShift.endMs - shift.endMs!);
+              const timeTolerance = 60000; // 1 minute in milliseconds
+              
+              if (startDiff <= timeTolerance && endDiff <= timeTolerance) {
+                console.log(`Skipping duplicate shift: ${new Date(shift.startMs!).toLocaleString()} - ${new Date(shift.endMs!).toLocaleString()}`);
+                return true;
+              }
+              
+              // Check for overlapping time ranges (handles overnight shifts)
+              const hasOverlap = (
+                (shift.startMs! < existingShift.endMs && shift.endMs! > existingShift.startMs) ||
+                (existingShift.startMs < shift.endMs! && existingShift.endMs > shift.startMs!)
+              );
+              
+              if (hasOverlap) {
+                console.log(`Skipping overlapping shift: ${new Date(shift.startMs!).toLocaleString()} - ${new Date(shift.endMs!).toLocaleString()} overlaps with existing shift`);
+                return true;
+              }
+              
+              return false;
+            });
+            
+            if (isDuplicate) {
+              continue; // Skip this duplicate shift
+            }
+            
             const finalShift: HistoryRec = {
               id: String(Date.now() + Math.random()),
               startMs: shift.startMs,
@@ -196,7 +228,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
         }
       }
       
-      console.log(`Successfully parsed ${shifts.length} shifts from CSV`);
+      console.log(`Successfully parsed ${shifts.length} shifts from CSV (duplicates skipped)`);
       return shifts;
     } catch (error) {
       console.error('CSV parsing error:', error);
@@ -476,24 +508,13 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
                         if (importedShifts.length > 0) {
                           // Merge imported data with existing history
                           const newHistory = [...snap.history];
-                          let addedCount = 0;
-                          let skippedCount = 0;
                           
+                          // Add all imported shifts (duplicates already filtered out by parseCSV)
                           importedShifts.forEach(shift => {
-                            // Check if shift already exists (by start time and duration)
-                            const exists = newHistory.some(existing => 
-                              existing.startMs === shift.startMs && 
-                              existing.netMs === shift.netMs
-                            );
-                            if (!exists) {
-                              newHistory.push({
-                                ...shift,
-                                id: String(Date.now() + Math.random()), // Generate unique ID
-                              });
-                              addedCount++;
-                            } else {
-                              skippedCount++;
-                            }
+                            newHistory.push({
+                              ...shift,
+                              id: String(Date.now() + Math.random()), // Generate unique ID
+                            });
                           });
                           
                           setSnap({
@@ -502,7 +523,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
                             updatedAt: Date.now(),
                           });
                           
-                          alert(`Successfully imported ${addedCount} shifts! ${skippedCount} duplicates were skipped.`);
+                          alert(`Successfully imported ${importedShifts.length} shifts! Duplicates were automatically detected and skipped.`);
                         } else {
                           alert('No valid shifts found in the CSV file. Please check the format.\n\nTip: Use the "Export Compatible" button to create files that can be imported on other devices.');
                         }
