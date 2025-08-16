@@ -155,6 +155,12 @@ export function shiftSummary(
 
   const netHours = msToHours(netMs);
   const breakHours = msToHours(breakMs);
+  
+  // Calculate overtime (hours beyond 7 hours per day)
+  const targetDailyHours = 7; // 7 hours net work daily (excluding breaks)
+  const overtimeHours = Math.max(0, netHours - targetDailyHours);
+  const overtime = hoursToText(overtimeHours);
+  
   const earnings = hourlyRate ? calculateEarnings(netHours, hourlyRate) : undefined;
 
   return {
@@ -162,6 +168,8 @@ export function shiftSummary(
     end: fmtClock(shiftEnd, hourFormat),
     net: hoursToText(netHours),
     breakTotal: hoursToText(breakHours),
+    overtime,
+    overtimeHours,
     breaks: breaksSummary,
     netMs,
     breakMs,

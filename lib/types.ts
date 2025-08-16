@@ -31,7 +31,9 @@ export type Preferences = {
   theme: 'dark' | 'light';
   targetMinutes?: number;
   hourlyRate?: number; // New: Hourly rate for billing calculations
+  monthlySalary?: number; // New: Monthly salary for automatic hourly rate calculation
   currency?: string; // New: Currency for billing display
+  vacationDate?: string; // New: Date picker for adding vacation days
   autoSync: boolean;
   syncCode: string;
 };

@@ -104,25 +104,47 @@ export default function SettingsPanel({ snap, setSnap }: { snap: Snapshot; setSn
         <h3 className="text-lg font-medium">Billing & Rates</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label>Hourly Rate</label>
+            <label>Monthly Salary (EGP)</label>
             <input
               className="input w-full"
               type="number"
               min="0"
               step="0.01"
-              placeholder="25.00"
+              placeholder="5000.00"
+              value={snap.prefs.monthlySalary || ''}
+              onChange={(e) => {
+                const salary = Number(e.target.value) || 0;
+                // Calculate hourly rate: 7 hours/day * 6 days/week * 4 weeks = 168 hours/month
+                const hourlyRate = salary > 0 ? salary / 168 : 0;
+                updatePrefs({ 
+                  monthlySalary: salary,
+                  hourlyRate: hourlyRate
+                });
+              }}
+            />
+            <div className="form-help">Based on 7h/day, 6 days/week, monthly calculation</div>
+          </div>
+          <div>
+            <label>Hourly Rate (EGP)</label>
+            <input
+              className="input w-full"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="29.76"
               value={snap.prefs.hourlyRate || ''}
               onChange={(e) => updatePrefs({ hourlyRate: Number(e.target.value) || undefined })}
             />
-            <div className="form-help">Set to 0 to disable earnings tracking</div>
+            <div className="form-help">Auto-calculated from salary or set manually</div>
           </div>
           <div>
             <label>Currency</label>
             <select
               className="input w-full"
-              value={snap.prefs.currency || 'USD'}
+              value={snap.prefs.currency || 'EGP'}
               onChange={(e) => updatePrefs({ currency: e.target.value })}
             >
+              <option value="EGP">EGP (ج.م)</option>
               <option value="USD">USD ($)</option>
               <option value="EUR">EUR (€)</option>
               <option value="GBP">GBP (£)</option>
@@ -130,6 +152,108 @@ export default function SettingsPanel({ snap, setSnap }: { snap: Snapshot; setSn
               <option value="AUD">AUD (A$)</option>
               <option value="JPY">JPY (¥)</option>
             </select>
+          </div>
+          <div>
+            <label>Work Schedule</label>
+            <div className="text-sm text-gray-400 space-y-1">
+              <div>• 7 hours net work per day</div>
+              <div>• 6 working days per week</div>
+              <div>• Monthly calculation period</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Vacation & Attendance Settings */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium">Vacation & Attendance</h3>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label>Add Vacation Day</label>
+              <input
+                className="input w-full"
+                type="date"
+                value={snap.prefs.vacationDate || ''}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    const vacationDate = new Date(e.target.value);
+                    const vacationMs = vacationDate.getTime();
+                    
+                    // Check if vacation day already exists
+                    const existingVacation = snap.history.find(h => 
+                      h.tags.includes('vacation') && 
+                      new Date(h.startMs).toDateString() === vacationDate.toDateString()
+                    );
+                    
+                    if (!existingVacation) {
+                      // Add vacation day to history
+                      const newVacation: typeof snap.history[0] = {
+                        id: String(Date.now()),
+                        startMs: vacationMs,
+                        endMs: vacationMs + (7 * 60 * 60 * 1000), // 7 hours
+                        netMs: 0, // No work time
+                        breakMs: 0,
+                        breaks: [],
+                        note: 'Vacation Day',
+                        tags: ['vacation', 'paid-leave'],
+                      };
+                      
+                      setSnap({
+                        ...snap,
+                        history: [newVacation, ...snap.history],
+                        updatedAt: Date.now()
+                      });
+                      
+                      // Clear the date input
+                      updatePrefs({ vacationDate: '' });
+                    } else {
+                      alert('Vacation day already exists for this date');
+                    }
+                  }
+                }}
+              />
+              <div className="form-help">Add paid vacation days to track attendance</div>
+            </div>
+            <div>
+              <label>Vacation Days This Month</label>
+              <div className="text-2xl font-mono text-blue-400">
+                {snap.history.filter(h => 
+                  h.tags.includes('vacation') && 
+                  new Date(h.startMs).getMonth() === new Date().getMonth()
+                ).length}
+              </div>
+              <div className="form-help">Current month vacation count</div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="text-center p-4 bg-gray-800/50 rounded-xl border border-gray-700/50">
+              <div className="text-2xl font-bold text-green-400">
+                {snap.history.filter(h => 
+                  !h.tags.includes('vacation') && 
+                  new Date(h.startMs).getMonth() === new Date().getMonth()
+                ).length}
+              </div>
+              <div className="text-sm text-gray-400">Working Days</div>
+            </div>
+            <div className="text-center p-4 bg-gray-800/50 rounded-xl border border-gray-700/50">
+              <div className="text-2xl font-bold text-blue-400">
+                {snap.history.filter(h => 
+                  h.tags.includes('vacation') && 
+                  new Date(h.startMs).getMonth() === new Date().getMonth()
+                ).length}
+              </div>
+              <div className="text-sm text-gray-400">Vacation Days</div>
+            </div>
+            <div className="text-center p-4 bg-gray-800/50 rounded-xl border border-gray-700/50">
+              <div className="text-2xl font-bold text-yellow-400">
+                {Math.max(0, 26 - snap.history.filter(h => 
+                  new Date(h.startMs).getMonth() === new Date().getMonth()
+                ).length)}
+              </div>
+              <div className="text-sm text-gray-400">Remaining Days</div>
+            </div>
           </div>
         </div>
       </div>
