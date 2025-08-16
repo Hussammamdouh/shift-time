@@ -1,0 +1,17 @@
+{
+  "name": "Shift Tracker - Professional Time Management",
+  "short_name": "Shift Tracker",
+  "description": "Advanced time tracking and shift management system",
+  "start_url": "/shift-time/",
+  "display": "standalone",
+  "background_color": "#0f0f23",
+  "theme_color": "#0f0f23",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/shift-time/favicon.ico",
+      "sizes": "16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}

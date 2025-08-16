@@ -40,6 +40,10 @@ jobs:
           NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
           NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
           
+      - name: Copy public files
+        run: |
+          cp -r public/* out/
+          
       - name: Setup Pages
         uses: actions/configure-pages@v4
         

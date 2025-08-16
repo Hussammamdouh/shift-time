@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
   },
   output: 'export',
   trailingSlash: true,
+  basePath: '/shift-time',
+  assetPrefix: '/shift-time/',
   poweredByHeader: false,
   compress: true,
   generateEtags: false,
@@ -23,6 +25,8 @@ const nextConfig: NextConfig = {
   // Disable server-side features for static export
   skipTrailingSlashRedirect: true,
   skipMiddlewareUrlNormalize: true,
+  // Ensure all assets use the correct base path
+  distDir: 'out',
 };
 
 export default nextConfig;
