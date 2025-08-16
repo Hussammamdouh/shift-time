@@ -70,7 +70,7 @@ export default function AnnotateBar({
         <div className="text-xs text-slate-500 bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
           <div className="font-medium mb-1">💡 Tagging Tips:</div>
           <ul className="space-y-1 text-slate-400">
-            <li>• Use descriptive tags like "remote", "overtime", "project-x"</li>
+            <li>• Use descriptive tags like &quot;remote&quot;, &quot;overtime&quot;, &quot;project-x&quot;</li>
             <li>• Separate multiple tags with commas</li>
             <li>• Tags help organize and filter your shift history</li>
           </ul>

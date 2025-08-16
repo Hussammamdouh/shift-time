@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "build:export": "next build && next export",
-    "build:pages": "cross-env NODE_ENV=production next build && node scripts/fix-paths.js",
+    "build:pages": "node scripts/lint-check.js && cross-env NODE_ENV=production next build && node scripts/fix-paths.js",
     "start": "next start",
     "lint": "next lint"
   },

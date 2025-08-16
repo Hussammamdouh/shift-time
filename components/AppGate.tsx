@@ -66,7 +66,7 @@ function HomeContent() {
   const averageShiftLength = totalShifts > 0 ? totalNetHours / totalShifts : 0;
   const hourlyRate = snap.prefs.hourlyRate || 0;
   const totalEarnings = hourlyRate > 0 ? totalNetHours * hourlyRate : 0;
-  const averageEarningsPerShift = totalShifts > 0 ? totalEarnings / totalShifts : 0;
+
 
   const tabConfig = {
     watch: {
@@ -192,7 +192,7 @@ function HomeContent() {
                   </div>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:bg-slate-800/70 transition-colors duration-300">
-                      <span className="text-slate-400 text-sm">Today's Shifts</span>
+                      <span className="text-slate-400 text-sm">Today&apos;s Shifts</span>
                       <span className="font-mono font-bold text-slate-200">0</span>
                     </div>
                     <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:bg-slate-800/70 transition-colors duration-300">
