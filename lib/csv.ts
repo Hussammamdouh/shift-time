@@ -191,3 +191,83 @@ export function downloadSummaryCSV(shifts: HistoryRec[], preferences?: Preferenc
     alert('Download not supported in this browser. Copy the data manually:\n\n' + csvContent);
   }
 }
+
+/**
+ * Export shifts with both human-readable and raw data for perfect import compatibility
+ * This ensures the exported CSV can be imported on any device without data loss
+ */
+export function downloadCompatibleCSV(shifts: HistoryRec[]): void {
+  if (shifts.length === 0) {
+    alert('No shifts to export');
+    return;
+  }
+
+  // CSV headers - Include both human-readable and raw data
+  const headers = [
+    // Raw data for perfect import (primary)
+    'startms',
+    'endms', 
+    'netms',
+    'breakms',
+    'note',
+    'tags',
+    // Human-readable data for viewing (secondary)
+    'date',
+    'start_time',
+    'end_time',
+    'duration_hhmm',
+    'break_time_hhmm',
+    'net_working_hhmm',
+    'overtime_hhmm'
+  ];
+
+  // CSV rows
+  const rows = shifts.map(shift => {
+    const netHours = shift.netMs / 3600000;
+    const targetDailyHours = 7;
+    const overtimeHours = Math.max(0, netHours - targetDailyHours);
+    const overtimeHhMm = `${Math.floor(overtimeHours)}:${Math.round((overtimeHours % 1) * 60).toString().padStart(2, '0')}`;
+    
+    return [
+      // Raw data (primary for import)
+      shift.startMs.toString(),
+      shift.endMs.toString(),
+      shift.netMs.toString(),
+      shift.breakMs.toString(),
+      shift.note || '',
+      (shift.tags || []).join('; '),
+      // Human-readable data (secondary for viewing)
+      formatDate(shift.startMs),
+      formatTime(shift.startMs),
+      formatTime(shift.endMs),
+      msToHhMm(shift.endMs - shift.startMs),
+      msToHhMm(shift.breakMs),
+      msToHhMm(shift.netMs),
+      overtimeHhMm
+    ];
+  });
+
+  // Combine headers and rows
+  const csvContent = [
+    headers.join(','),
+    ...rows.map(row => row.map(escapeCsvField).join(','))
+  ].join('\n');
+
+  // Create and download file
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `shifts-compatible-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } else {
+    // Fallback for older browsers
+    alert('Download not supported in this browser. Copy the data manually:\n\n' + csvContent);
+  }
+}

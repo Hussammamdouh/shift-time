@@ -12,8 +12,11 @@ const nextConfig: NextConfig = {
   },
   output: 'export',
   trailingSlash: true,
-  basePath: '/shift-time',
-  assetPrefix: '/shift-time/',
+  // Only apply basePath and assetPrefix in production builds
+  ...(process.env.NODE_ENV === 'production' && {
+    basePath: '/shift-time',
+    assetPrefix: '/shift-time/',
+  }),
   poweredByHeader: false,
   compress: true,
   generateEtags: false,

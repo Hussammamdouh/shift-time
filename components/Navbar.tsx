@@ -21,6 +21,7 @@ const tabConfig = {
     color: 'from-violet-600 to-cyan-600',
     bgColor: 'from-violet-600/20 to-cyan-600/20',
     borderColor: 'border-violet-500/30',
+    hoverColor: 'hover:from-violet-600/30 hover:to-cyan-600/30',
   },
   manual: {
     label: 'Manual Entry',
@@ -33,6 +34,7 @@ const tabConfig = {
     color: 'from-slate-600 to-slate-700',
     bgColor: 'from-slate-600/20 to-slate-700/20',
     borderColor: 'border-slate-500/30',
+    hoverColor: 'hover:from-slate-600/30 hover:to-slate-700/30',
   },
   report: {
     label: 'Reports',
@@ -45,6 +47,7 @@ const tabConfig = {
     color: 'from-violet-600 to-cyan-600',
     bgColor: 'from-violet-600/20 to-cyan-600/20',
     borderColor: 'border-violet-500/30',
+    hoverColor: 'hover:from-violet-600/30 hover:to-cyan-600/30',
   },
   sync: {
     label: 'Sync',
@@ -55,8 +58,9 @@ const tabConfig = {
       </svg>
     ),
     color: 'from-blue-600 to-indigo-600',
-    bgColor: 'from-blue-600/20 to-indigo-600/20',
+    bgColor: 'from-blue-600/20 to-blue-600/20',
     borderColor: 'border-blue-500/30',
+    hoverColor: 'hover:from-blue-600/30 hover:to-indigo-600/30',
   },
   settings: {
     label: 'Settings',
@@ -70,6 +74,7 @@ const tabConfig = {
     color: 'from-slate-600 to-slate-700',
     bgColor: 'from-slate-600/20 to-slate-700/20',
     borderColor: 'border-slate-500/30',
+    hoverColor: 'hover:from-slate-600/30 hover:to-slate-700/30',
   },
 };
 
@@ -78,15 +83,22 @@ export default function Navbar({ tab, setTab }: Props) {
 
   return (
     <>
-      {/* Desktop Navigation */}
-      <nav className="hidden lg:block space-y-3">
+      {/* Enhanced Desktop Navigation */}
+      <nav className="hidden lg:block space-y-4">
         <div className="text-center pb-4 border-b border-slate-700/50">
-          <h2 className="text-lg font-semibold text-slate-200">Navigation</h2>
+          <div className="flex items-center justify-center space-x-3 mb-2">
+            <div className="w-8 h-8 bg-gradient-to-r from-violet-600 to-cyan-600 rounded-lg flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-semibold text-slate-200">Navigation</h2>
+          </div>
           <p className="text-sm text-slate-400">Quick access to features</p>
         </div>
         
-        <div className="space-y-2">
-          {(Object.keys(tabConfig) as Tab[]).map((tabKey) => {
+        <div className="space-y-3">
+          {(Object.keys(tabConfig) as Tab[]).map((tabKey, index) => {
             const config = tabConfig[tabKey];
             const isActive = tab === tabKey;
             
@@ -94,30 +106,34 @@ export default function Navbar({ tab, setTab }: Props) {
               <button
                 key={tabKey}
                 onClick={() => setTab(tabKey)}
-                className={`w-full group relative overflow-hidden rounded-xl p-4 text-left transition-all duration-300 transform hover:scale-105 ${
+                className={`w-full group relative overflow-hidden rounded-2xl p-4 text-left transition-all duration-500 transform hover:scale-105 ${
                   isActive 
-                    ? `bg-gradient-to-r ${config.bgColor} border ${config.borderColor} shadow-lg` 
-                    : 'hover:bg-slate-800/50 border border-transparent hover:border-slate-600/50'
+                    ? `bg-gradient-to-r ${config.bgColor} border ${config.borderColor} shadow-lg shadow-violet-500/25` 
+                    : 'hover:bg-slate-800/50 border border-transparent hover:border-slate-600/50 hover:shadow-lg'
                 }`}
+                style={{ animationDelay: `${index * 100}ms` }}
               >
-                {/* Active indicator */}
+                {/* Enhanced Active indicator */}
                 {isActive && (
                   <div className={`absolute inset-0 bg-gradient-to-r ${config.color} opacity-10`} />
                 )}
                 
-                <div className="relative flex items-center space-x-3">
-                  {/* Icon */}
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                {/* Enhanced Hover effect */}
+                <div className={`absolute inset-0 bg-gradient-to-r ${config.hoverColor} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+                
+                <div className="relative flex items-center space-x-4">
+                  {/* Enhanced Icon */}
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${
                     isActive 
-                      ? `bg-gradient-to-r ${config.color} text-white shadow-lg` 
-                      : 'bg-slate-700/50 text-slate-400 group-hover:bg-slate-600/50 group-hover:text-slate-300'
+                      ? `bg-gradient-to-r ${config.color} text-white shadow-lg shadow-violet-500/25` 
+                      : 'bg-slate-700/50 text-slate-400 group-hover:bg-slate-600/50 group-hover:text-slate-300 group-hover:scale-110'
                   }`}>
                     {config.icon}
                   </div>
                   
-                  {/* Text */}
+                  {/* Enhanced Text */}
                   <div className="flex-1 min-w-0">
-                    <div className={`font-medium transition-colors duration-300 ${
+                    <div className={`font-semibold text-base transition-colors duration-300 ${
                       isActive ? 'text-white' : 'text-slate-200 group-hover:text-white'
                     }`}>
                       {config.label}
@@ -129,10 +145,19 @@ export default function Navbar({ tab, setTab }: Props) {
                     </div>
                   </div>
                   
-                  {/* Active indicator dot */}
+                  {/* Enhanced Active indicator dot */}
                   {isActive && (
-                    <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${config.color}`} />
+                    <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${config.color} shadow-lg`} />
                   )}
+                  
+                  {/* Enhanced Hover arrow */}
+                  <div className={`w-5 h-5 text-slate-400 group-hover:text-slate-300 transition-all duration-300 transform group-hover:translate-x-1 ${
+                    isActive ? 'text-violet-400' : ''
+                  }`}>
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
                 </div>
               </button>
             );
@@ -140,11 +165,11 @@ export default function Navbar({ tab, setTab }: Props) {
         </div>
       </nav>
 
-      {/* Mobile Navigation Toggle */}
+      {/* Enhanced Mobile Navigation Toggle */}
       <div className="lg:hidden">
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="w-full flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:bg-slate-700/50 transition-colors duration-200"
+          className="w-full flex items-center justify-between p-4 bg-slate-800/70 rounded-2xl border border-slate-700/50 hover:bg-slate-700/70 transition-all duration-300 hover:shadow-lg"
         >
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-gradient-to-r from-violet-600 to-cyan-600 rounded-lg flex items-center justify-center">
@@ -155,7 +180,7 @@ export default function Navbar({ tab, setTab }: Props) {
             <span className="font-medium text-slate-200">Navigation</span>
           </div>
           <svg 
-            className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${isMobileMenuOpen ? 'rotate-180' : ''}`} 
+            className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${isMobileMenuOpen ? 'rotate-180' : ''}`} 
             fill="none" 
             stroke="currentColor" 
             viewBox="0 0 24 24"
@@ -164,10 +189,10 @@ export default function Navbar({ tab, setTab }: Props) {
           </svg>
         </button>
 
-        {/* Mobile Menu */}
+        {/* Enhanced Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="mt-3 space-y-2 animate-in slide-in-from-top-2 duration-200">
-            {(Object.keys(tabConfig) as Tab[]).map((tabKey) => {
+          <div className="mt-4 space-y-3 animate-in slide-in-from-top-2 duration-300">
+            {(Object.keys(tabConfig) as Tab[]).map((tabKey, index) => {
               const config = tabConfig[tabKey];
               const isActive = tab === tabKey;
               
@@ -178,21 +203,22 @@ export default function Navbar({ tab, setTab }: Props) {
                     setTab(tabKey);
                     setIsMobileMenuOpen(false);
                   }}
-                  className={`w-full flex items-center space-x-3 p-3 rounded-xl transition-all duration-200 ${
+                  className={`w-full flex items-center space-x-4 p-4 rounded-2xl transition-all duration-300 transform hover:scale-105 ${
                     isActive 
-                      ? `bg-gradient-to-r ${config.bgColor} border ${config.borderColor}` 
-                      : 'hover:bg-slate-800/50'
+                      ? `bg-gradient-to-r ${config.bgColor} border ${config.borderColor} shadow-lg` 
+                      : 'hover:bg-slate-800/70 hover:shadow-lg'
                   }`}
+                  style={{ animationDelay: `${index * 100}ms` }}
                 >
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
                     isActive 
-                      ? `bg-gradient-to-r ${config.color} text-white` 
+                      ? `bg-gradient-to-r ${config.color} text-white shadow-lg` 
                       : 'bg-slate-700/50 text-slate-400'
                   }`}>
                     {config.icon}
                   </div>
                   <div className="flex-1 text-left">
-                    <div className={`font-medium ${
+                    <div className={`font-semibold ${
                       isActive ? 'text-white' : 'text-slate-200'
                     }`}>
                       {config.label}
@@ -204,7 +230,7 @@ export default function Navbar({ tab, setTab }: Props) {
                     </div>
                   </div>
                   {isActive && (
-                    <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${config.color}`} />
+                    <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${config.color} shadow-lg`} />
                   )}
                 </button>
               );
