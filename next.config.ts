@@ -27,6 +27,16 @@ const nextConfig: NextConfig = {
   skipMiddlewareUrlNormalize: true,
   // Ensure all assets use the correct base path
   distDir: 'out',
+  // Force all public assets to use basePath
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

@@ -22,15 +22,15 @@ git push origin main
 2. **Source**: Set to **"GitHub Actions"**
 3. Click **Save**
 
-### **Step 3: Add Environment Variables**
+### **Step 3: Add Environment Variables (CRITICAL!)**
 
 1. Go to: **Settings** → **Secrets and variables** → **Actions**
 2. Add these secrets:
    ```
-   NEXT_PUBLIC_FIREBASE_API_KEY = your_firebase_api_key
+   NEXT_PUBLIC_FIREBASE_API_KEY = AIzaSyCjBdzEnNW7r1Z5rFuif1JTS5ghZzpOWyI
    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN = shift-manager-hm47.firebaseapp.com
    NEXT_PUBLIC_FIREBASE_PROJECT_ID = shift-manager-hm47
-   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET = shift-manager-hm47.appspot.com
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET = shift-manager-hm47.firebasestorage.app
    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID = 538729969739
    NEXT_PUBLIC_FIREBASE_APP_ID = 1:538729969739:web:eefef3ad4bc209f7e475ce
    ```
@@ -52,6 +52,8 @@ https://hussammamdouh.github.io/shift-time/
 
 ### **1. Next.js Configuration**
 - ✅ `output: 'export'` - Creates static files
+- ✅ `basePath: '/shift-time'` - Subdirectory deployment
+- ✅ `assetPrefix: '/shift-time/'` - Asset path prefix
 - ✅ `trailingSlash: true` - GitHub Pages compatibility
 - ✅ `images: { unoptimized: true }` - Static image handling
 
@@ -59,18 +61,20 @@ https://hussammamdouh.github.io/shift-time/
 - ✅ Creates `out/` directory with static files
 - ✅ All pages pre-rendered as HTML
 - ✅ No server-side dependencies
+- ✅ All assets use `/shift-time/` prefix
 
 ### **3. GitHub Actions**
 - ✅ Uses `actions/deploy-pages@v4` (official action)
 - ✅ Uploads from `out/` directory
 - ✅ Proper permissions for Pages deployment
+- ✅ Copies public files to output directory
 
 ## 🎯 **Features That Work on GitHub Pages**
 
 - ✅ **Stopwatch**: Full functionality
 - ✅ **Reports**: Data display and export
 - ✅ **Settings**: All configuration options
-- ✅ **Firebase**: Client-side integration
+- ✅ **Firebase**: Client-side integration (with env vars)
 - ✅ **Responsive Design**: Mobile and desktop
 - ✅ **Data Persistence**: Local storage + Firebase sync
 
@@ -101,9 +105,15 @@ Every time you push to `main`:
 3. Check GitHub Actions logs for specific errors
 
 ### **Firebase Not Working?**
-1. Verify all environment variables are set
+1. ✅ **VERIFY ALL ENVIRONMENT VARIABLES ARE SET** in GitHub Secrets
 2. Check Firebase project is active
 3. Ensure services are enabled (Auth, Firestore)
+4. **Most Common Issue**: Missing environment variables in GitHub Secrets
+
+### **Manifest.json 404?**
+1. ✅ **Fixed**: Public files are now copied to output directory
+2. ✅ **Fixed**: All asset paths use `/shift-time/` prefix
+3. ✅ **Fixed**: Next.js configuration handles basePath correctly
 
 ## 🎉 **Success Indicators**
 
@@ -111,9 +121,21 @@ Every time you push to `main`:
 - ✅ **Deployment**: "Deploy to GitHub Pages" step succeeds
 - ✅ **Live Site**: App loads without 404 errors
 - ✅ **Functionality**: All features work as expected
+- ✅ **Firebase**: Authentication and data sync working
+- ✅ **Assets**: All CSS, JS, fonts, and images loading
+
+## 🚨 **CRITICAL: Environment Variables**
+
+**The most common cause of Firebase errors is missing environment variables in GitHub Secrets!**
+
+Make sure you have ALL of these set in your repository:
+1. Go to **Settings** → **Secrets and variables** → **Actions**
+2. Add each Firebase environment variable as a secret
+3. Use the exact names shown above
+4. Use the values from your `.env.local` file
 
 ---
 
 **🚀 Your Shift Tracker will now deploy successfully to GitHub Pages!**
 
-The static export configuration ensures compatibility with GitHub Pages' static hosting requirements.
+The static export configuration ensures compatibility with GitHub Pages' static hosting requirements, and all asset paths are correctly configured for subdirectory deployment.
