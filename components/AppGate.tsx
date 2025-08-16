@@ -62,10 +62,10 @@ function HomeContent() {
   // Calculate statistics for dashboard
   const totalShifts = snap.history.length;
   const totalNetHours = snap.history.reduce((a, r) => a + r.netMs, 0) / 3600000;
-  const totalBreakTime = snap.history.reduce((a, r) => a + r.breakMs, 0) / 3600000;
   const averageShiftLength = totalShifts > 0 ? totalNetHours / totalShifts : 0;
   const hourlyRate = snap.prefs.hourlyRate || 0;
   const totalEarnings = hourlyRate > 0 ? totalNetHours * hourlyRate : 0;
+  const averageEarningsPerShift = totalShifts > 0 ? totalEarnings / totalShifts : 0;
 
   const tabConfig = {
     watch: {

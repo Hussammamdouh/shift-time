@@ -1,9 +1,9 @@
 'use client';
 import { useState } from 'react';
-import type { Snapshot, HistoryRec } from '@/lib/types';
-import { downloadCSV, downloadSummaryCSV } from '@/lib/csv';
-import { shiftSummary } from '@/lib/timeUtils';
+import { downloadSummaryCSV } from '../lib/csv';
+import { shiftSummary } from '../lib/timeUtils';
 import EditShiftModal from './EditShiftModal';
+import type { HistoryRec, Snapshot } from '../lib/types';
 
 type Props = { 
   snap: Snapshot; 
@@ -19,9 +19,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
   // Calculate statistics
   const totalShifts = snap.history.length;
   const totalNetHours = snap.history.reduce((a, r) => a + r.netMs, 0) / 3600000;
-  const totalMinutes = Math.floor(totalNetHours * 60);
   const averageShiftLength = totalShifts > 0 ? totalNetHours / totalShifts : 0;
-  const totalBreakTime = snap.history.reduce((a, r) => a + r.breakMs, 0) / 3600000;
   
   // Calculate overtime (hours beyond 7 hours per session, based on net working hours)
   const targetDailyHours = 7; // 7 hours net work daily
@@ -60,9 +58,6 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
           return 0;
       }
     });
-
-  // Get unique tags
-  const allTags = Array.from(new Set(snap.history.flatMap(shift => shift.tags)));
 
   function openEditModal(shift: HistoryRec) {
     setEditTarget({ kind: 'history', id: shift.id, record: shift });
@@ -147,12 +142,6 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
     });
   }
 
-  function formatDuration(ms: number) {
-    const hours = Math.floor(ms / 3600000);
-    const minutes = Math.floor((ms % 3600000) / 60000);
-    return `${hours}h ${minutes}m`;
-  }
-
   return (
     <div className="space-y-12">
       {/* Statistics Dashboard */}
@@ -193,7 +182,9 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <div className="text-3xl font-bold text-slate-200">{roundToTwo(totalBreakTime).toFixed(2)}h</div>
+          <div className="text-3xl font-bold text-slate-200">
+            {roundToTwo(snap.history.reduce((a, r) => a + r.breakMs, 0) / 3600000).toFixed(2)}h
+          </div>
           <div className="text-sm text-slate-400">Break Time</div>
         </div>
 
@@ -256,7 +247,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
           <div className="flex flex-wrap items-center gap-4">
             <button
               className="btn btn-success"
-              onClick={() => downloadSummaryCSV(filteredShifts)}
+              onClick={() => downloadSummaryCSV(filteredShifts, snap.prefs)}
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />

@@ -2,8 +2,8 @@
 // Functions: pullSnapshot, pushSnapshot, subscribeRoom
 // Notes: For personal use. Anyone knowing the passcode can derive the same room id.
 
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db, ensureAnonSignIn } from './firebase';
-import { doc, getDoc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import type { Snapshot } from './types';
 
 // Simple client-side SHA-256
@@ -25,72 +25,67 @@ function isFirebaseAvailable() {
 
 /** Pull snapshot from Firestore (if it exists) */
 export async function pullSnapshot(passcode: string): Promise<Snapshot | null> {
-  if (!isFirebaseAvailable()) {
-    console.warn('Firebase not configured. Pull operation skipped.');
-    return null;
-  }
-  
   try {
+    if (!isFirebaseAvailable()) {
+      console.warn('Firebase not configured, skipping pull operation');
+      return null;
+    }
+    
     await ensureAnonSignIn();
     const roomId = await roomIdFromPasscode(passcode);
-    const ref = doc(db, 'rooms', roomId);
+    const ref = doc(db!, 'rooms', roomId);
     const snap = await getDoc(ref);
     if (!snap.exists()) return null;
     const data = snap.data();
-    return (data.snapshot as Snapshot) ?? null;
+    return data as Snapshot;
   } catch (error) {
-    console.error('Failed to pull snapshot:', error);
+    console.error('Pull failed:', error);
     return null;
   }
 }
 
 /** Push (upsert) snapshot to Firestore */
-export async function pushSnapshot(passcode: string, snapshot: Snapshot): Promise<void> {
-  if (!isFirebaseAvailable()) {
-    console.warn('Firebase not configured. Push operation skipped.');
-    return;
-  }
-  
+export async function pushSnapshot(passcode: string, snapshot: Snapshot): Promise<boolean> {
   try {
+    if (!isFirebaseAvailable()) {
+      console.warn('Firebase not configured, skipping push operation');
+      return false;
+    }
+    
     await ensureAnonSignIn();
     const roomId = await roomIdFromPasscode(passcode);
-    const ref = doc(db, 'rooms', roomId);
-
-    // Last-write-wins; you can add merge logic if needed
-    const toStore = {
-      snapshot: { ...snapshot, updatedAt: Date.now() },
-      updatedAt: serverTimestamp(),
-    };
-    await setDoc(ref, toStore, { merge: true });
+    const ref = doc(db!, 'rooms', roomId);
+    await setDoc(ref, snapshot);
+    return true;
   } catch (error) {
-    console.error('Failed to push snapshot:', error);
-    throw error;
+    console.error('Push failed:', error);
+    return false;
   }
 }
 
 /** Live subscribe; returns unsubscribe function */
-export async function subscribeRoom(
-  passcode: string,
-  cb: (remote: Snapshot | null) => void
-): Promise<() => void> {
-  if (!isFirebaseAvailable()) {
-    console.warn('Firebase not configured. Live sync disabled.');
-    // Return a no-op unsubscribe function
-    return () => {};
-  }
-  
+export async function subscribeRoom(passcode: string, callback: (snapshot: Snapshot | null) => void): Promise<() => void> {
   try {
+    if (!isFirebaseAvailable()) {
+      console.warn('Firebase not configured, skipping subscription');
+      return () => {}; // Return no-op unsubscribe function
+    }
+    
     await ensureAnonSignIn();
     const roomId = await roomIdFromPasscode(passcode);
-    const ref = doc(db, 'rooms', roomId);
-    return onSnapshot(ref, (d) => {
-      if (!d.exists()) return cb(null);
-      const data = d.data();
-      cb((data.snapshot as Snapshot) ?? null);
+    const ref = doc(db!, 'rooms', roomId);
+    
+    const unsubscribe = onSnapshot(ref, (snap) => {
+      if (snap.exists()) {
+        callback(snap.data() as Snapshot);
+      } else {
+        callback(null);
+      }
     });
+    
+    return unsubscribe;
   } catch (error) {
-    console.error('Failed to subscribe to room:', error);
-    // Return a no-op unsubscribe function
-    return () => {};
+    console.error('Subscription failed:', error);
+    return () => {}; // Return no-op unsubscribe function
   }
 }

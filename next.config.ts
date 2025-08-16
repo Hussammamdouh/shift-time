@@ -15,7 +15,6 @@ const nextConfig: NextConfig = {
   compress: true,
   generateEtags: false,
   reactStrictMode: true,
-  swcMinify: true,
   images: {
     unoptimized: false,
     formats: ['image/webp', 'image/avif'],

@@ -1,4 +1,4 @@
-import type { HistoryRec } from './types';
+import type { HistoryRec, Preferences } from './types';
 
 /**
  * Convert milliseconds to HH:MM format
@@ -112,36 +112,25 @@ export function downloadCSV(shifts: HistoryRec[]): void {
 /**
  * Generate summary CSV with totals and statistics
  */
-export function downloadSummaryCSV(shifts: HistoryRec[]): void {
+export function downloadSummaryCSV(shifts: HistoryRec[], preferences?: Preferences): void {
   if (shifts.length === 0) {
     alert('No shifts to export');
     return;
   }
 
-  // Calculate totals
+  // Calculate summary statistics
   const totalShifts = shifts.length;
-  const totalNetMs = shifts.reduce((sum, shift) => sum + shift.netMs, 0);
-  const totalBreakMs = shifts.reduce((sum, shift) => sum + shift.breakMs, 0);
-  const totalGrossMs = shifts.reduce((sum, shift) => sum + (shift.endMs - shift.startMs), 0);
-  
-  const totalNetHours = Math.floor(totalNetMs / 3600000);
-  const totalNetMinutes = Math.floor((totalNetMs % 3600000) / 60000);
-  const totalBreakHours = Math.floor(totalBreakMs / 3600000);
-  const totalBreakMinutes = Math.floor((totalBreakMs % 3600000) / 60000);
-  
-  // Calculate overtime
-  const targetDailyHours = 7; // 7 hours net work daily (excluding breaks)
-  const totalOvertimeHours = shifts.reduce((sum, shift) => {
-    const shiftNetHours = shift.netMs / 3600000;
-    const overtime = Math.max(0, shiftNetHours - targetDailyHours);
-    return sum + overtime;
+  const totalNetHours = shifts.reduce((a, r) => a + r.netMs, 0) / 3600000;
+  const totalBreakHours = shifts.reduce((a, r) => a + r.breakMs, 0) / 3600000;
+  const totalOvertimeHours = shifts.reduce((a, r) => {
+    const shiftNetHours = r.netMs / 3600000;
+    const overtime = Math.max(0, shiftNetHours - 7);
+    return a + overtime;
   }, 0);
-  const totalOvertimeHoursWhole = Math.floor(totalOvertimeHours);
-  const totalOvertimeMinutes = Math.round((totalOvertimeHours % 1) * 60);
   
-  const averageShiftMs = totalNetMs / totalShifts;
-  const averageShiftHours = Math.floor(averageShiftMs / 3600000);
-  const averageShiftMinutes = Math.floor((averageShiftMs % 3600000) / 60000);
+  // Calculate earnings
+  const hourlyRate = preferences?.hourlyRate || 0;
+  const totalEarnings = hourlyRate > 0 ? totalNetHours * hourlyRate : 0;
 
   // CSV content
   const csvContent = [
@@ -157,16 +146,17 @@ export function downloadSummaryCSV(shifts: HistoryRec[]): void {
     '',
     'SUMMARY STATISTICS',
     `Total Shifts,${totalShifts}`,
-    `Total Net Working Time,${totalNetHours}h ${totalNetMinutes}m`,
-    `Total Break Time,${totalBreakHours}h ${totalBreakMinutes}m`,
-    `Total Overtime,${totalOvertimeHoursWhole}h ${totalOvertimeMinutes}m`,
-    `Average Shift Length,${averageShiftHours}h ${averageShiftMinutes}m`,
+    `Total Net Working Time,${totalNetHours}h ${Math.floor((totalNetHours % 1) * 60).toString().padStart(2, '0')}m`,
+    `Total Break Time,${totalBreakHours}h ${Math.floor((totalBreakHours % 1) * 60).toString().padStart(2, '0')}m`,
+    `Total Overtime,${Math.floor(totalOvertimeHours)}h ${Math.round((totalOvertimeHours % 1) * 60).toString().padStart(2, '0')}m`,
+    `Total Earnings,${totalEarnings.toFixed(2)}`,
+    `Average Shift Length,${Math.floor(shifts.reduce((a, r) => a + r.netMs, 0) / totalShifts / 3600000)}h ${Math.floor((shifts.reduce((a, r) => a + r.netMs, 0) / totalShifts % 3600000) / 60000)}m`,
     '',
     // Detailed shifts
     'Date,Start Time,End Time,Duration (HH:MM),Break Time (HH:MM),Net Working Time (HH:MM),Overtime (HH:MM),Tags,Notes',
     ...shifts.map(shift => {
       const netHours = shift.netMs / 3600000;
-      const overtimeHours = Math.max(0, netHours - targetDailyHours);
+      const overtimeHours = Math.max(0, netHours - 7);
       const overtimeHhMm = `${Math.floor(overtimeHours)}:${Math.round((overtimeHours % 1) * 60).toString().padStart(2, '0')}`;
       
       return [
