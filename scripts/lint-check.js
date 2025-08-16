@@ -18,20 +18,31 @@ function checkJSXQuotes(filePath) {
   lines.forEach((line, index) => {
     const lineNum = index + 1;
     
-    // Check for unescaped quotes in JSX text content
+    // Check for unescaped quotes in JSX text content (but ignore JSX expressions)
     if (line.includes('>') && line.includes('<')) {
       // Look for quotes in JSX text content (between > and <)
       const jsxTextMatches = line.match(/>([^<]*?)</g);
       if (jsxTextMatches) {
         jsxTextMatches.forEach(match => {
           const text = match.slice(1, -1); // Remove > and <
+          
+          // Skip if this is a JSX expression (contains {})
+          if (text.includes('{') && text.includes('}')) {
+            return;
+          }
+          
+          // Only flag actual text content with quotes
           if (text.includes('"') || text.includes("'")) {
-            issues.push({
-              file: filePath,
-              line: lineNum,
-              issue: 'Unescaped quotes in JSX text content',
-              text: text.trim()
-            });
+            // Check if this is just a simple text node
+            const trimmedText = text.trim();
+            if (trimmedText && !trimmedText.startsWith('{') && !trimmedText.endsWith('}')) {
+              issues.push({
+                file: filePath,
+                line: lineNum,
+                issue: 'Unescaped quotes in JSX text content',
+                text: trimmedText
+              });
+            }
           }
         });
       }
