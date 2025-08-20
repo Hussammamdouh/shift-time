@@ -1,13 +1,23 @@
 import type { HistoryRec, Preferences } from './types';
 
 /**
- * Convert milliseconds to HH:MM format
+ * Convert milliseconds to HHhours:MMminutes format
  */
 function msToHhMm(ms: number): string {
   const mins = Math.max(0, Math.round(ms / 60000));
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  return `${h}:${m.toString().padStart(2, '0')}`;
+  return `${String(h).padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Convert decimal hours to HHhours:MMminutes format
+ */
+function hoursToText(hours: number): string {
+  const totalMinutes = Math.max(0, Math.round(hours * 60));
+  const hh = Math.floor(totalMinutes / 60);
+  const mm = totalMinutes % 60;
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
 }
 
 /**
@@ -69,7 +79,7 @@ export function downloadCSV(shifts: HistoryRec[]): void {
     const netHours = shift.netMs / 3600000;
     const targetDailyHours = 7; // 7 hours net work daily (excluding breaks)
     const overtimeHours = Math.max(0, netHours - targetDailyHours);
-    const overtimeHhMm = `${Math.floor(overtimeHours)}:${Math.round((overtimeHours % 1) * 60).toString().padStart(2, '0')}`;
+    const overtimeHhMm = hoursToText(overtimeHours);
     
     return [
       formatDate(shift.startMs),
@@ -146,18 +156,18 @@ export function downloadSummaryCSV(shifts: HistoryRec[], preferences?: Preferenc
     '',
     'SUMMARY STATISTICS',
     `Total Shifts,${totalShifts}`,
-    `Total Net Working Time,${totalNetHours}h ${Math.floor((totalNetHours % 1) * 60).toString().padStart(2, '0')}m`,
-    `Total Break Time,${totalBreakHours}h ${Math.floor((totalBreakHours % 1) * 60).toString().padStart(2, '0')}m`,
-    `Total Overtime,${Math.floor(totalOvertimeHours)}h ${Math.round((totalOvertimeHours % 1) * 60).toString().padStart(2, '0')}m`,
+    `Total Net Working Time,${hoursToText(totalNetHours)}`,
+    `Total Break Time,${hoursToText(totalBreakHours)}`,
+    `Total Overtime,${hoursToText(totalOvertimeHours)}`,
     `Total Earnings,${totalEarnings.toFixed(2)}`,
-    `Average Shift Length,${Math.floor(shifts.reduce((a, r) => a + r.netMs, 0) / totalShifts / 3600000)}h ${Math.floor((shifts.reduce((a, r) => a + r.netMs, 0) / totalShifts % 3600000) / 60000)}m`,
+    `Average Shift Length,${hoursToText((shifts.reduce((a, r) => a + r.netMs, 0) / 3600000) / totalShifts)}`,
     '',
     // Detailed shifts
     'Date,Start Time,End Time,Duration (HH:MM),Break Time (HH:MM),Net Working Time (HH:MM),Overtime (HH:MM),Tags,Notes',
     ...shifts.map(shift => {
       const netHours = shift.netMs / 3600000;
       const overtimeHours = Math.max(0, netHours - 7);
-      const overtimeHhMm = `${Math.floor(overtimeHours)}:${Math.round((overtimeHours % 1) * 60).toString().padStart(2, '0')}`;
+      const overtimeHhMm = hoursToText(overtimeHours);
       
       return [
         formatDate(shift.startMs),

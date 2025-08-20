@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { downloadSummaryCSV, downloadCompatibleCSV } from '../lib/csv';
-import { shiftSummary } from '../lib/timeUtils';
+import { shiftSummary, hoursToText } from '../lib/timeUtils';
 import EditShiftModal from './EditShiftModal';
 import type { HistoryRec, Snapshot } from '../lib/types';
 
@@ -338,7 +338,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
               </svg>
             </div>
             <div className="space-y-2">
-              <div className="text-3xl font-bold text-slate-200">{roundToTwo(totalNetHours).toFixed(2)}h</div>
+              <div className="text-3xl font-bold text-slate-200">{hoursToText(totalNetHours)}</div>
               <div className="text-sm text-slate-400">Total Hours</div>
             </div>
           </div>
@@ -350,7 +350,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
               </svg>
             </div>
             <div className="space-y-2">
-              <div className="text-3xl font-bold text-slate-200">{roundToTwo(averageShiftLength).toFixed(2)}h</div>
+              <div className="text-3xl font-bold text-slate-200">{hoursToText(averageShiftLength)}</div>
               <div className="text-sm text-slate-400">Avg. Shift</div>
             </div>
           </div>
@@ -362,9 +362,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
               </svg>
             </div>
             <div className="space-y-2">
-              <div className="text-3xl font-bold text-slate-200">
-                {roundToTwo(snap.history.reduce((a, r) => a + r.breakMs, 0) / 3600000).toFixed(2)}h
-              </div>
+              <div className="text-3xl font-bold text-slate-200">{hoursToText(snap.history.reduce((a, r) => a + r.breakMs, 0) / 3600000)}</div>
               <div className="text-sm text-slate-400">Break Time</div>
             </div>
           </div>
@@ -377,7 +375,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
               </svg>
             </div>
             <div className="space-y-2">
-              <div className="text-3xl font-bold text-slate-200">{roundToTwo(totalOvertimeHours).toFixed(2)}h</div>
+              <div className="text-3xl font-bold text-slate-200">{hoursToText(totalOvertimeHours)}</div>
               <div className="text-sm text-slate-400">Overtime Hours</div>
               {hourlyRate > 0 && (
                 <div className="text-xs text-slate-500 bg-slate-800/50 px-2 py-1 rounded-full">
@@ -746,9 +744,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
                     <td className="table-cell px-6 py-4">
                       <div className="space-y-2">
                         <div className="text-lg font-bold text-slate-200">{summary.net}</div>
-                        <div className="text-xs text-slate-400">
-                          {Math.round((shift.netMs / 3600000) * 100) / 100}h net work
-                        </div>
+                        <div className="text-xs text-slate-400">{hoursToText(shift.netMs / 3600000)} net work</div>
                       </div>
                     </td>
                     
@@ -778,7 +774,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
                               <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                               </svg>
-                              +{summary.overtimeHours.toFixed(2)}h beyond 7h target
+                              +{hoursToText(summary.overtimeHours)} beyond {hoursToText(7)} target
                             </div>
                             {snap.prefs.hourlyRate && snap.prefs.hourlyRate > 0 && (
                               <div className="text-xs text-slate-500">

@@ -31,7 +31,8 @@ export default function EditShiftModal({
 
     if (target.kind === 'current') {
       const ws = snap.watch;
-      setStart(toLocalDT(ws.startTimeMs ?? Date.now()));
+      // Do not fall back to Date.now() to avoid jumping to live time while editing
+      setStart(toLocalDT(ws.startTimeMs ?? null));
       setEnd(ws.endTimeMs ? toLocalDT(ws.endTimeMs) : '');
       const br = (ws.breaks||[]).map(b => ({ start: toLocalDT(b.startMs), end: b.endMs ? toLocalDT(b.endMs) : '' }));
       setBreaks(br.length ? br : []);
@@ -45,13 +46,23 @@ export default function EditShiftModal({
       setNote(r.note || '');
       setTags(r.tags || []);
     }
-  }, [open, target, snap]);
+  }, [open, target]);
 
   // Update form validity when form fields change
   useEffect(() => {
-    const valid = start.trim() !== '' && end.trim() !== '';
-    setIsFormValid(valid);
-  }, [start, end]);
+    if (!open || !target) { setIsFormValid(false); return; }
+    const s = fromLocalDT(start || '');
+    const e = fromLocalDT(end || '');
+    if (target.kind === 'current') {
+      // For current session, allow saving with just a valid start; if end is provided, it must be after start
+      const hasStart = start.trim() !== '';
+      const endEmpty = end.trim() === '';
+      const endAfterStart = !!s && !!e && (e as number) > (s as number);
+      setIsFormValid(hasStart && (endEmpty || endAfterStart));
+    } else {
+      setIsFormValid(!!s && !!e && (e as number) > (s as number));
+    }
+  }, [open, target, start, end]);
 
   function addBreak(){ setBreaks([...breaks, {start:'', end:''}]); }
   function rmBreak(i:number){ const a=[...breaks]; a.splice(i,1); setBreaks(a); }
@@ -132,7 +143,7 @@ export default function EditShiftModal({
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="w-full max-w-4xl card space-y-8 p-8" onClick={e=>e.stopPropagation()}>
+      <div className="w-full max-w-3xl max-h-[85vh] overflow-y-auto card space-y-8 p-6 sm:p-8" onClick={e=>e.stopPropagation()}>
         {/* Enhanced Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">

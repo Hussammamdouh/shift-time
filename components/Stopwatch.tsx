@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { Snapshot } from '@/lib/types';
-import { msToHhMm, fmtClock } from '@/lib/timeUtils';
+import { msToHhMm, fmtClock, hoursToText } from '@/lib/timeUtils';
 import ProgressRing from './ProgressRing';
 import EditShiftModal from './EditShiftModal';
 
@@ -142,10 +142,10 @@ export default function Stopwatch({ snap, setSnap }: Props) {
             <div className="flex flex-col items-center gap-8">
               <ProgressRing
                 progress={Math.min(workedHours / targetNetHours, 1)}
-                label={`${t.hh}:${t.mm}`}
+                label={t.text}
                 sublabel={
                   workedHours >= targetNetHours 
-                    ? '7h target met! ✓' 
+                    ? `${hoursToText(targetNetHours)} target met! ✓` 
                     : workedHours >= targetNetHours * 0.9 
                     ? 'Almost there…' 
                     : 'Keep going!'
@@ -156,19 +156,19 @@ export default function Stopwatch({ snap, setSnap }: Props) {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full max-w-lg">
                 <div className="card-hover text-center p-6 bg-slate-800/50 rounded-2xl border border-slate-700/50 hover:border-blue-500/50">
                   <div className="text-3xl font-bold text-blue-400 mb-2">
-                    {roundToTwo(workedHours).toFixed(2)}h
+                    {hoursToText(workedHours)}
                   </div>
                   <div className="text-slate-400 font-medium">Worked</div>
                 </div>
                 <div className="card-hover text-center p-6 bg-slate-800/50 rounded-2xl border border-slate-700/50 hover:border-yellow-500/50">
                   <div className="text-3xl font-bold text-yellow-400 mb-2">
-                    {roundToTwo(totalBreakHours).toFixed(2)}h
+                    {hoursToText(totalBreakHours)}
                   </div>
                   <div className="text-slate-400 font-medium">Breaks</div>
                 </div>
                 <div className="card-hover text-center p-6 bg-slate-800/50 rounded-2xl border border-slate-700/50 hover:border-green-500/50">
                   <div className="text-3xl font-bold text-green-400 mb-2">
-                    {roundToTwo(remainingNetHours).toFixed(2)}h
+                    {hoursToText(remainingNetHours)}
                   </div>
                   <div className="text-slate-400 font-medium">Remaining</div>
                 </div>
@@ -178,9 +178,7 @@ export default function Stopwatch({ snap, setSnap }: Props) {
               {workedHours >= targetNetHours && (
                 <div className="bg-emerald-500/20 border border-emerald-500/30 rounded-3xl px-8 py-6 text-center animate-in slide-in-from-bottom-2 duration-500">
                   <div className="text-3xl font-bold text-emerald-400 mb-3">🎉 Target Achieved!</div>
-                  <div className="text-emerald-300 text-lg">
-                    You&apos;ve completed your 7-hour net working time goal
-                  </div>
+                  <div className="text-emerald-300 text-lg">You&apos;ve completed your {hoursToText(targetNetHours)} net working time goal</div>
                 </div>
               )}
               
@@ -198,9 +196,7 @@ export default function Stopwatch({ snap, setSnap }: Props) {
                   <div className="text-4xl font-bold text-emerald-400">
                     {roundToTwo(currentEarnings).toFixed(2)} {snap.prefs.currency || 'EGP'}
                   </div>
-                  <div className="text-slate-400 text-lg">
-                    {roundToTwo(workedHours).toFixed(2)}h × {roundToTwo(hourlyRate).toFixed(2)} {snap.prefs.currency || 'EGP'}/h
-                  </div>
+                  <div className="text-slate-400 text-lg">{hoursToText(workedHours)} × {roundToTwo(hourlyRate).toFixed(2)} {snap.prefs.currency || 'EGP'}/hour</div>
                   {targetEarnings > 0 && (
                     <div className="text-sm text-slate-500">
                       Target: {roundToTwo(targetEarnings).toFixed(2)} {snap.prefs.currency || 'EGP'}
@@ -227,7 +223,7 @@ export default function Stopwatch({ snap, setSnap }: Props) {
             <div className="space-y-4">
               <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:bg-slate-800/70 transition-colors duration-300">
                 <span className="text-slate-400">Target Net Time</span>
-                <span className="font-mono font-bold text-violet-400">7.0h</span>
+                <span className="font-mono font-bold text-violet-400">{hoursToText(targetNetHours)}</span>
               </div>
               <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:bg-slate-800/70 transition-colors duration-300">
                 <span className="text-slate-400">Progress</span>
@@ -235,9 +231,7 @@ export default function Stopwatch({ snap, setSnap }: Props) {
               </div>
               <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:bg-slate-800/70 transition-colors duration-300">
                 <span className="text-slate-400">Remaining</span>
-                <span className="font-mono font-bold text-blue-400">
-                  {Math.max(0, targetNetHours - workedHours).toFixed(1)}h
-                </span>
+                <span className="font-mono font-bold text-blue-400">{hoursToText(Math.max(0, targetNetHours - workedHours))}</span>
               </div>
             </div>
           </div>
@@ -260,7 +254,7 @@ export default function Stopwatch({ snap, setSnap }: Props) {
                 </div>
                 <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:bg-slate-800/70 transition-colors duration-300">
                   <span className="text-slate-400">Duration</span>
-                  <span className="font-mono text-slate-200">{roundToTwo(workedHours).toFixed(2)}h</span>
+                  <span className="font-mono text-slate-200">{t.text}</span>
                 </div>
                 
                 {/* Enhanced Earnings Info */}
@@ -411,9 +405,7 @@ export default function Stopwatch({ snap, setSnap }: Props) {
               <div className="text-3xl font-bold text-emerald-400">
                 {Math.round((workedHours / targetNetHours) * 100)}%
               </div>
-              <div className="text-xs text-slate-500">
-                {roundToTwo(workedHours).toFixed(2)}h of {targetNetHours}h target
-              </div>
+              <div className="text-xs text-slate-500">{hoursToText(workedHours)} of {hoursToText(targetNetHours)} target</div>
             </div>
             
             <div className="p-6 bg-slate-800/50 rounded-2xl border border-slate-700/50 hover:bg-slate-800/70 transition-colors duration-300">
@@ -424,12 +416,7 @@ export default function Stopwatch({ snap, setSnap }: Props) {
                   : fmtClock(startTimeMs + (targetNetHours * 3600000), fmt)
                 }
               </div>
-              <div className="text-xs text-slate-500">
-                {workedHours >= targetNetHours 
-                  ? 'You&apos;ve exceeded your daily goal' 
-                  : `${roundToTwo(remainingNetHours).toFixed(2)}h remaining`
-                }
-              </div>
+              <div className="text-xs text-slate-500">{workedHours >= targetNetHours ? 'You\'ve exceeded your daily goal' : `${hoursToText(remainingNetHours)} remaining`}</div>
             </div>
           </div>
         </div>
@@ -438,7 +425,7 @@ export default function Stopwatch({ snap, setSnap }: Props) {
       <EditShiftModal
         open={editOpen}
         onClose={() => setEditOpen(false)}
-        target={{ kind: 'current' }}
+        target={useMemo(() => ({ kind: 'current' as const }), [])}
         snap={snap}
         setSnap={setSnap}
       />

@@ -153,7 +153,7 @@ function HomeContent() {
                 <div className="flex items-center space-x-3 px-4 py-2 bg-slate-800/50 rounded-xl border border-slate-700/50 backdrop-blur-sm">
                   <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
                   <span className="text-slate-300 font-medium">Hours:</span>
-                  <span className="font-mono font-bold text-emerald-400">{totalNetHours.toFixed(1)}h</span>
+                  <span className="font-mono font-bold text-emerald-400">{Math.floor(totalNetHours).toString().padStart(2, '0')}:{Math.round((totalNetHours % 1) * 60).toString().padStart(2, '0')}</span>
                 </div>
                 {hourlyRate > 0 && (
                   <div className="flex items-center space-x-3 px-4 py-2 bg-emerald-500/20 rounded-xl border border-emerald-500/30 backdrop-blur-sm">

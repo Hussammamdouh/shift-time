@@ -522,7 +522,7 @@ export default function SettingsPanel({ snap, setSnap }: { snap: Snapshot; setSn
           <div className="space-y-3">
             <label className="text-sm font-medium text-slate-400">Total Working Hours</label>
             <div className="text-3xl font-bold text-slate-200 bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
-              {(snap.history.reduce((a, r) => a + r.netMs, 0) / 3600000).toFixed(1)}h
+              {(() => { const hrs = (snap.history.reduce((a, r) => a + r.netMs, 0) / 3600000); const h = Math.floor(hrs); const m = Math.round((hrs % 1) * 60); return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`; })()}
             </div>
           </div>
           {snap.prefs.hourlyRate && snap.prefs.hourlyRate > 0 && (

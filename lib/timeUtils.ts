@@ -33,7 +33,7 @@ export function msToHhMm(ms: number): { hh: number; mm: number; text: string; ho
   return {
     hh,
     mm,
-    text: `${hh}:${mm.toString().padStart(2, '0')}`,
+    text: `${String(hh).padStart(2, '0')}:${mm.toString().padStart(2, '0')}`,
     hours
   };
 }
@@ -45,13 +45,10 @@ export function msToHours(ms: number): number {
 
 /** Convert decimal hours to formatted string */
 export function hoursToText(hours: number): string {
-  const wholeHours = Math.floor(hours);
-  const minutes = Math.round((hours - wholeHours) * 60);
-  
-  if (minutes === 0) {
-    return `${wholeHours}h`;
-  }
-  return `${wholeHours}h ${minutes}m`;
+  const totalMinutes = Math.max(0, Math.round(hours * 60));
+  const hh = Math.floor(totalMinutes / 60);
+  const mm = totalMinutes % 60;
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
 }
 
 /** Format timestamp as clock time */
