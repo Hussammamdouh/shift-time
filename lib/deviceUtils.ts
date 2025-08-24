@@ -6,12 +6,11 @@ import type { DeviceInfo } from './types';
 export function detectDeviceType(): 'desktop' | 'mobile' | 'tablet' | 'unknown' {
   if (typeof window === 'undefined') return 'unknown';
   
-  const userAgent = navigator.userAgent.toLowerCase();
   const screenWidth = window.screen.width;
   const screenHeight = window.screen.height;
   
   // Check for mobile devices
-  if (/android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)) {
+  if (/android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(navigator.userAgent.toLowerCase())) {
     // Distinguish between mobile and tablet based on screen size
     if (screenWidth >= 768 || screenHeight >= 768) {
       return 'tablet';
@@ -47,15 +46,14 @@ export function generateDeviceId(): string {
 export function getDeviceName(): string {
   if (typeof window === 'undefined') return 'Unknown Device';
   
-  const userAgent = navigator.userAgent;
   const platform = navigator.platform;
   
   // Try to get device name from various sources
-  if (navigator.deviceMemory) {
-    return `${platform} (${navigator.deviceMemory}GB RAM)`;
+  if ('deviceMemory' in navigator && typeof (navigator as Navigator & { deviceMemory?: number }).deviceMemory === 'number') {
+    return `${platform} (${(navigator as Navigator & { deviceMemory?: number }).deviceMemory}GB RAM)`;
   }
   
-  if (navigator.hardwareConcurrency) {
+  if ('hardwareConcurrency' in navigator && navigator.hardwareConcurrency) {
     return `${platform} (${navigator.hardwareConcurrency} cores)`;
   }
   

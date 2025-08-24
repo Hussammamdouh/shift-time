@@ -1,7 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Snapshot, DeviceInfo } from '@/lib/types';
-import { formatDeviceType, getDeviceStatusIndicator, isDeviceActive } from '@/lib/deviceUtils';
+import { formatDeviceType, isDeviceActive } from '@/lib/deviceUtils';
 
 export default function DevicePanel({ snap }: { snap: Snapshot }) {
   const [devices, setDevices] = useState<DeviceInfo[]>([]);

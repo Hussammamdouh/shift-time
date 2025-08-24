@@ -5,7 +5,7 @@
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db, ensureAnonSignIn } from './firebase';
 import type { Snapshot, DeviceInfo } from './types';
-import { createDeviceInfo, updateDeviceInfo, isDeviceActive } from './deviceUtils';
+import { createDeviceInfo, isDeviceActive } from './deviceUtils';
 
 // Simple client-side SHA-256
 async function sha256Hex(input: string): Promise<string> {

@@ -10,7 +10,6 @@ import ReportTable from './ReportTable';
 import SyncPanel from './SyncPanel';
 import Navbar from './Navbar';
 import SettingsPanel from './SettingsPanel';
-import { autoSync } from '@/lib/sync';
 import { PageLoader } from './LoadingSpinner';
 import { createDeviceInfo } from '@/lib/deviceUtils';
 
@@ -42,9 +41,6 @@ function HomeContent() {
   
   const initialTab = searchParams.get('tab') as 'watch' | 'manual' | 'report' | 'sync' | 'settings' || 'watch';
   const [tab, setTab] = useState<'watch' | 'manual' | 'report' | 'sync' | 'settings'>(initialTab);
-  const [syncUnsubscribe, setSyncUnsubscribe] = useState<(() => void) | null>(null);
-  const [syncMessage, setSyncMessage] = useState<string>('');
-  const [showSyncMessage, setShowSyncMessage] = useState(false);
 
   useEffect(() => {
     const urlTab = searchParams.get('tab') as 'watch' | 'manual' | 'report' | 'sync' | 'settings';
@@ -59,14 +55,14 @@ function HomeContent() {
   useEffect(() => {
     if (!snap.currentDeviceId) {
       const deviceInfo = createDeviceInfo();
-      setSnap({
-        ...snap,
+      setSnap(prevSnap => ({
+        ...prevSnap,
         currentDeviceId: deviceInfo.id,
         devices: [deviceInfo],
         updatedAt: Date.now(),
-      });
+      }));
     }
-  }, []);
+  }, [snap.currentDeviceId, snap.devices]);
 
   // Keep device status current
   useEffect(() => {
@@ -92,63 +88,6 @@ function HomeContent() {
     
     return () => clearInterval(interval);
   }, [snap.currentDeviceId, snap.devices]);
-
-  useEffect(() => {
-    const code = (snap.prefs.syncCode || '').trim();
-    if (!snap.prefs.autoSync || !code) {
-      // Clean up existing sync if disabled
-      if (syncUnsubscribe) {
-        syncUnsubscribe();
-        setSyncUnsubscribe(null);
-      }
-      return;
-    }
-    
-    const t = setTimeout(async () => {
-      try {
-        const result = await autoSync(code, snap, setSnap, (error) => {
-          console.error('Auto-sync error:', error);
-          setSyncMessage(`Sync Error: ${error}`);
-          setShowSyncMessage(true);
-          setTimeout(() => setShowSyncMessage(false), 5000);
-        });
-        
-        if (result.success) {
-          setSyncMessage(result.message);
-          setShowSyncMessage(true);
-          setTimeout(() => setShowSyncMessage(false), 3000);
-          
-          if (result.unsubscribe) {
-            // Clean up existing sync before setting new one
-            if (syncUnsubscribe) {
-              syncUnsubscribe();
-            }
-            setSyncUnsubscribe(() => result.unsubscribe!);
-          }
-        } else {
-          setSyncMessage(result.message);
-          setShowSyncMessage(true);
-          setTimeout(() => setShowSyncMessage(false), 5000);
-        }
-      } catch (error) {
-        console.error('Auto-sync failed:', error);
-        setSyncMessage(`Sync Failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        setShowSyncMessage(true);
-        setTimeout(() => setShowSyncMessage(false), 5000);
-      }
-    }, 500);
-    
-    return () => clearTimeout(t);
-  }, [snap.prefs.autoSync, snap.prefs.syncCode, snap, syncUnsubscribe]);
-
-  // Clean up sync when component unmounts
-  useEffect(() => {
-    return () => {
-      if (syncUnsubscribe) {
-        syncUnsubscribe();
-      }
-    };
-  }, [syncUnsubscribe]);
 
   function deleteShift(id: string) {
     setSnap({ ...snap, history: snap.history.filter((r) => r.id !== id) });
@@ -232,21 +171,21 @@ function HomeContent() {
             <div className="flex items-center space-x-6">
               <div className="hidden sm:flex items-center space-x-3 text-sm">
                 <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg border ${
-                  syncUnsubscribe && snap.prefs.autoSync
+                  snap.prefs.autoSync
                     ? 'bg-emerald-500/20 border-emerald-500/30'
                     : 'bg-slate-500/20 border-slate-500/30'
                 }`}>
                   <div className={`w-2 h-2 rounded-full ${
-                    syncUnsubscribe && snap.prefs.autoSync
+                    snap.prefs.autoSync
                       ? 'bg-emerald-500 animate-pulse'
                       : 'bg-slate-500'
                   }`}></div>
                   <span className={`font-medium ${
-                    syncUnsubscribe && snap.prefs.autoSync
+                    snap.prefs.autoSync
                       ? 'text-emerald-300'
                       : 'text-slate-400'
                   }`}>
-                    {syncUnsubscribe && snap.prefs.autoSync ? 'Auto Sync Active' : 'Local Only'}
+                    {snap.prefs.autoSync ? 'Auto Sync Active' : 'Local Only'}
                   </span>
                 </div>
               </div>
@@ -321,30 +260,7 @@ function HomeContent() {
           <main className="lg:col-span-3">
             <div className="space-y-8">
               {/* Sync Status Notification */}
-              {showSyncMessage && (
-                <div className="animate-in slide-in-from-top-2 duration-300">
-                  <div className="card bg-blue-500/20 border border-blue-500/30">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-blue-300 font-medium">{syncMessage}</p>
-                      </div>
-                      <button 
-                        className="text-blue-400 hover:text-blue-300 transition-colors"
-                        onClick={() => setShowSyncMessage(false)}
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* Removed sync message and state as autoSync is removed */}
 
               {/* Enhanced Page Header */}
               <div className="card space-y-6">

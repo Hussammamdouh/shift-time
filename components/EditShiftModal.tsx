@@ -25,7 +25,7 @@ export default function EditShiftModal({
   const [error, setError] = useState<string>('');
   const [isFormValid, setIsFormValid] = useState(false);
 
-  useEffect(()=>{
+  useEffect(() => {
     if (!open || !target) return;
     setError('');
 
@@ -46,7 +46,7 @@ export default function EditShiftModal({
       setNote(r.note || '');
       setTags(r.tags || []);
     }
-  }, [open, target]);
+  }, [open, target, snap.watch]);
 
   // Update form validity when form fields change
   useEffect(() => {
