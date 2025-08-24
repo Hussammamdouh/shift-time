@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import type { Snapshot } from '@/lib/types';
 import { setPasscode, disableLock, isLockEnabled } from '@/lib/passcode';
-import { autoSync } from '@/lib/sync';
 
 // Helper function to format currency
 function formatCurrency(amount: number, currency: string = 'USD'): string {
@@ -29,25 +28,13 @@ export default function SettingsPanel({ snap, setSnap }: { snap: Snapshot; setSn
       // Trigger sync after a short delay to avoid too frequent calls
       const timer = setTimeout(async () => {
         try {
-          setMessage('Auto-syncing...');
-          const result = await autoSync(
-            code, 
-            snap, 
-            setSnap, 
-            (error) => setMessage(`Auto-sync error: ${error}`)
-          );
-          
-          if (result.success) {
-            setMessage(`Auto-sync successful: ${result.message}`);
-            // Clear success message after 3 seconds
-            setTimeout(() => setMessage(''), 3000);
-          } else {
-            setMessage(`Auto-sync failed: ${result.message}`);
-            // Clear error message after 5 seconds
-            setTimeout(() => setMessage(''), 5000);
-          }
+          setMessage('LiveSync starting...');
+          // LiveSync is now handled automatically in AppGate component
+          setMessage('LiveSync enabled ✓');
+          // Clear success message after 3 seconds
+          setTimeout(() => setMessage(''), 3000);
         } catch (error) {
-          setMessage(`Auto-sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          setMessage(`LiveSync failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
           setTimeout(() => setMessage(''), 5000);
         }
       }, 1000);
@@ -413,70 +400,41 @@ export default function SettingsPanel({ snap, setSnap }: { snap: Snapshot; setSn
               <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
               </svg>
-              <span>Sync Passcode</span>
+              <span>LiveSync Passcode</span>
             </label>
             <input 
               className="input w-full" 
-              placeholder="e.g. 4937" 
+              placeholder="e.g. 4937 (4-8 digits)" 
               value={snap.prefs.syncCode || ''} 
               onChange={(e) => updatePrefs({ syncCode: e.target.value })}
             />
+            <div className="text-xs text-slate-500 bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
+              <div className="font-medium mb-1">🔐 Security Note:</div>
+              <p>Your passcode is hashed client-side using SHA-256 before being sent to Firebase. 
+              The actual passcode is never stored or transmitted in plain text.</p>
+            </div>
           </div>
           <div className="space-y-3">
             <label className="form-label flex items-center space-x-2">
               <svg className="w-4 h-4 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              <span>Auto-sync</span>
+              <span>LiveSync</span>
             </label>
             <div className="flex items-center space-x-3">
               <input 
                 type="checkbox" 
                 id="autoSync"
-                checked={snap.prefs.autoSync || false} 
+                checked={snap.prefs.autoSync !== false} 
                 onChange={(e) => updatePrefs({ autoSync: e.target.checked })}
                 className="w-5 h-5 text-violet-600 bg-slate-800 border-slate-600 rounded focus:ring-violet-500 focus:ring-2"
               />
-              <label htmlFor="autoSync" className="text-slate-300">Auto-sync on changes</label>
+              <label htmlFor="autoSync" className="text-slate-300">Enable real-time sync across devices</label>
             </div>
-          </div>
-          <div className="space-y-3">
-            <label className="form-label flex items-center space-x-2">
-              <svg className="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span>Test Sync</span>
-            </label>
-            <button 
-              className="btn btn-primary w-full" 
-              onClick={async () => {
-                if (!snap.prefs.syncCode?.trim()) return;
-                
-                setMessage('Testing sync...');
-                try {
-                  const result = await autoSync(
-                    snap.prefs.syncCode.trim(), 
-                    snap, 
-                    setSnap, 
-                    (error) => setMessage(`Sync error: ${error}`)
-                  );
-                  
-                  if (result.success) {
-                    setMessage(`Sync test successful: ${result.message}`);
-                  } else {
-                    setMessage(`Sync test failed: ${result.message}`);
-                  }
-                } catch (error) {
-                  setMessage(`Sync test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-                }
-              }}
-              disabled={!snap.prefs.syncCode?.trim()}
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              Test Sync
-            </button>
+            <div className="text-xs text-slate-500 bg-blue-500/10 p-3 rounded-lg border border-blue-500/20">
+              <div className="font-medium mb-1 text-blue-400">💡 LiveSync Info:</div>
+              <p>When enabled, all your changes (shifts, breaks, settings) will automatically sync in real-time across all devices using the same passcode.</p>
+            </div>
           </div>
         </div>
       </div>

@@ -12,6 +12,7 @@ import Navbar from './Navbar';
 import SettingsPanel from './SettingsPanel';
 import { PageLoader } from './LoadingSpinner';
 import { createDeviceInfo } from '@/lib/deviceUtils';
+import { subscribeRoom, pushSnapshot } from '@/lib/sync';
 
 const emptySnapshot: Snapshot = {
   schemaVersion: 1,
@@ -26,7 +27,7 @@ const emptySnapshot: Snapshot = {
     targetMinutes: 420, 
     hourlyRate: 25,
     currency: 'EGP',
-    autoSync: false, 
+    autoSync: true, 
     syncCode: '' 
   },
   devices: [],
@@ -41,6 +42,7 @@ function HomeContent() {
   
   const initialTab = searchParams.get('tab') as 'watch' | 'manual' | 'report' | 'sync' | 'settings' || 'watch';
   const [tab, setTab] = useState<'watch' | 'manual' | 'report' | 'sync' | 'settings'>(initialTab);
+  const [liveSyncUnsub, setLiveSyncUnsub] = useState<(() => void) | null>(null);
 
   useEffect(() => {
     const urlTab = searchParams.get('tab') as 'watch' | 'manual' | 'report' | 'sync' | 'settings';
@@ -89,8 +91,79 @@ function HomeContent() {
     return () => clearInterval(interval);
   }, [snap.currentDeviceId, snap.devices]);
 
+  // Auto-start LiveSync when sync code is configured
+  useEffect(() => {
+    const startLiveSync = async () => {
+      if (!snap.prefs.syncCode?.trim() || !snap.prefs.autoSync) {
+        // Clean up existing sync if disabled
+        if (liveSyncUnsub) {
+          liveSyncUnsub();
+          setLiveSyncUnsub(null);
+        }
+        return;
+      }
+
+      try {
+        // First, push current data to ensure it's available to other devices
+        await pushSnapshot(snap.prefs.syncCode, snap);
+        
+        // Then start real-time subscription
+        const unsubscribe = await subscribeRoom(snap.prefs.syncCode, (remote) => {
+          if (remote && remote.updatedAt > snap.updatedAt) {
+            // Only update if remote data is newer
+            setSnap(prevSnap => ({
+              ...remote,
+              currentDeviceId: prevSnap.currentDeviceId, // Preserve current device ID
+              devices: [
+                ...(remote.devices || []).filter(d => d.id !== prevSnap.currentDeviceId),
+                ...(prevSnap.devices || []).filter(d => d.id === prevSnap.currentDeviceId)
+              ]
+            }));
+          }
+        });
+        
+        setLiveSyncUnsub(() => unsubscribe);
+      } catch (error) {
+        console.error('Auto LiveSync failed:', error);
+      }
+    };
+
+    startLiveSync();
+
+    // Cleanup on unmount
+    return () => {
+      if (liveSyncUnsub) {
+        liveSyncUnsub();
+      }
+    };
+  }, [snap.prefs.syncCode, snap.prefs.autoSync, snap.updatedAt, liveSyncUnsub, snap]);
+
+  // Enhanced setSnap that automatically syncs to cloud when LiveSync is active
+  const setSnapWithSync = (newSnap: Snapshot | ((prev: Snapshot) => Snapshot)) => {
+    setSnap(prevSnap => {
+      const updatedSnap = typeof newSnap === 'function' ? newSnap(prevSnap) : newSnap;
+      
+      // Auto-sync to cloud if LiveSync is active
+      if (liveSyncUnsub && snap.prefs.syncCode?.trim()) {
+        // Use setTimeout to avoid blocking the UI update
+        setTimeout(async () => {
+          try {
+            await pushSnapshot(snap.prefs.syncCode!, updatedSnap);
+          } catch (error) {
+            console.error('Auto-sync failed:', error);
+          }
+        }, 0);
+      }
+      
+      return updatedSnap;
+    });
+  };
+
   function deleteShift(id: string) {
-    setSnap({ ...snap, history: snap.history.filter((r) => r.id !== id) });
+    setSnapWithSync(prevSnap => ({ 
+      ...prevSnap, 
+      history: prevSnap.history.filter((r) => r.id !== id) 
+    }));
   }
 
   // Calculate statistics for dashboard
@@ -250,6 +323,27 @@ function HomeContent() {
                       <span className="text-slate-400 text-sm">Daily Target</span>
                       <span className="font-mono font-bold text-violet-400">{snap.prefs.targetMinutes || 420}m</span>
                     </div>
+                    <div className={`flex items-center justify-between p-3 rounded-xl border transition-colors duration-300 ${
+                      liveSyncUnsub && snap.prefs.syncCode?.trim()
+                        ? 'bg-emerald-500/20 border-emerald-500/30 hover:bg-emerald-500/30'
+                        : 'bg-slate-800/50 border-slate-700/50 hover:bg-slate-800/70'
+                    }`}>
+                      <span className="text-slate-400 text-sm">LiveSync</span>
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          liveSyncUnsub && snap.prefs.syncCode?.trim()
+                            ? 'bg-emerald-500 animate-pulse'
+                            : 'bg-slate-500'
+                        }`}></div>
+                        <span className={`font-mono font-bold ${
+                          liveSyncUnsub && snap.prefs.syncCode?.trim()
+                            ? 'text-emerald-400'
+                            : 'text-slate-400'
+                        }`}>
+                          {liveSyncUnsub && snap.prefs.syncCode?.trim() ? 'Active' : 'Offline'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -295,11 +389,11 @@ function HomeContent() {
 
               {/* Enhanced Tab Content with Animations */}
               <div className="animate-in fade-in-scale duration-500">
-                {tab === 'watch' && <Stopwatch snap={snap} setSnap={setSnap} />}
-                {tab === 'manual' && <ManualForm snap={snap} setSnap={setSnap} />}
-                {tab === 'report' && <ReportTable snap={snap} setSnap={setSnap} onDelete={deleteShift} />}
-                {tab === 'sync' && <SyncPanel snap={snap} setSnap={setSnap} />}
-                {tab === 'settings' && <SettingsPanel snap={snap} setSnap={setSnap} />}
+                {tab === 'watch' && <Stopwatch snap={snap} setSnap={setSnapWithSync} />}
+                {tab === 'manual' && <ManualForm snap={snap} setSnap={setSnapWithSync} />}
+                {tab === 'report' && <ReportTable snap={snap} setSnap={setSnapWithSync} onDelete={deleteShift} />}
+                {tab === 'sync' && <SyncPanel snap={snap} setSnap={setSnapWithSync} />}
+                {tab === 'settings' && <SettingsPanel snap={snap} setSnap={setSnapWithSync} />}
               </div>
             </div>
           </main>
