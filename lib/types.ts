@@ -3,6 +3,15 @@ export type BreakRange = {
   endMs: number | null;
 };
 
+export type DeviceInfo = {
+  id: string;
+  name: string;
+  type: 'desktop' | 'mobile' | 'tablet' | 'unknown';
+  lastSeen: number;
+  isOnline: boolean;
+  version?: string;
+};
+
 export type HistoryRec = {
   id: string;
   startMs: number;
@@ -46,4 +55,6 @@ export type Snapshot = {
   manual: ManualState;
   history: HistoryRec[];
   prefs: Preferences;
+  devices?: DeviceInfo[];
+  currentDeviceId?: string;
 };

@@ -468,7 +468,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
               
               <button
                 className="btn btn-info w-full mt-3"
-                onClick={() => downloadCompatibleCSV(filteredShifts)}
+                onClick={() => downloadCompatibleCSV(filteredShifts, snap.prefs)}
                 title="Export data in compatible format for importing on other devices"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

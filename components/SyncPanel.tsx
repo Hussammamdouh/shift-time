@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { Snapshot } from '@/lib/types';
-import { pullSnapshot, pushSnapshot, subscribeRoom } from '@/lib/sync';
+import { pullSnapshot, pushSnapshot, subscribeRoom, autoSync } from '@/lib/sync';
 import { db } from '@/lib/firebase';
+import DevicePanel from './DevicePanel';
 
 export default function SyncPanel({ snap, setSnap }: { snap: Snapshot; setSnap: (s: Snapshot) => void }) {
   const [code, setCode] = useState('');
@@ -161,7 +162,7 @@ export default function SyncPanel({ snap, setSnap }: { snap: Snapshot; setSnap: 
           </div>
 
           {/* Enhanced Action Buttons */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <button 
               className={`btn ${!isFirebaseConfigured || !code.trim() ? 'btn-secondary' : 'btn-info'} h-16`}
               onClick={doPull}
@@ -189,6 +190,45 @@ export default function SyncPanel({ snap, setSnap }: { snap: Snapshot; setSnap: 
                 </svg>
                 <span className="text-sm font-medium">Push Data</span>
                 <span className="text-xs opacity-80">Upload to cloud</span>
+              </div>
+            </button>
+            
+            <button 
+              className={`btn ${!isFirebaseConfigured || !code.trim() ? 'btn-secondary' : 'btn-primary'} h-16`}
+              onClick={async () => {
+                if (!isFirebaseConfigured || !code.trim()) return;
+                
+                setStatus('Auto-syncing...');
+                try {
+                  const result = await autoSync(code, snap, setSnap, (error) => {
+                    setStatus(`Auto-sync error: ${error}`);
+                  });
+                  
+                  if (result.success) {
+                    setStatus(`Auto-sync: ${result.message}`);
+                    if (result.unsubscribe) {
+                      // Set up the unsubscribe for this manual trigger
+                      if (unsub) {
+                        unsub();
+                      }
+                      setUnsub(() => result.unsubscribe!);
+                    }
+                  } else {
+                    setStatus(`Auto-sync failed: ${result.message}`);
+                  }
+                } catch (error) {
+                  setStatus(`Auto-sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                }
+              }}
+              disabled={!isFirebaseConfigured || !code.trim()}
+              title={!isFirebaseConfigured || !code.trim() ? 'Configure Firebase and enter passcode first' : 'Automatically sync data'}
+            >
+              <div className="flex flex-col items-center space-y-1">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span className="text-sm font-medium">Auto Sync</span>
+                <span className="text-xs opacity-80">Smart sync</span>
               </div>
             </button>
             
@@ -282,6 +322,9 @@ export default function SyncPanel({ snap, setSnap }: { snap: Snapshot; setSnap: 
           )}
         </div>
       </div>
+
+      {/* Device Management Panel */}
+      <DevicePanel snap={snap} />
     </div>
   );
 }

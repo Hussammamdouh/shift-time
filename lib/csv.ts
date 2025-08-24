@@ -55,7 +55,7 @@ function escapeCsvField(field: string): string {
 /**
  * Convert shifts to CSV format and trigger download
  */
-export function downloadCSV(shifts: HistoryRec[]): void {
+export function downloadCSV(shifts: HistoryRec[], preferences?: Preferences): void {
   if (shifts.length === 0) {
     alert('No shifts to export');
     return;
@@ -70,6 +70,8 @@ export function downloadCSV(shifts: HistoryRec[]): void {
     'Break Time (HH:MM)',
     'Net Working Time (HH:MM)',
     'Overtime (HH:MM)',
+    'Hourly Rate',
+    'Earnings',
     'Tags',
     'Notes'
   ];
@@ -81,6 +83,10 @@ export function downloadCSV(shifts: HistoryRec[]): void {
     const overtimeHours = Math.max(0, netHours - targetDailyHours);
     const overtimeHhMm = hoursToText(overtimeHours);
     
+    // Calculate earnings using preferences hourly rate
+    const hourlyRate = preferences?.hourlyRate || 0;
+    const earnings = hourlyRate > 0 ? netHours * hourlyRate : 0;
+    
     return [
       formatDate(shift.startMs),
       formatTime(shift.startMs),
@@ -89,6 +95,8 @@ export function downloadCSV(shifts: HistoryRec[]): void {
       msToHhMm(shift.breakMs),
       msToHhMm(shift.netMs),
       overtimeHhMm,
+      hourlyRate > 0 ? hourlyRate.toFixed(2) : 'N/A',
+      earnings > 0 ? earnings.toFixed(2) : 'N/A',
       (shift.tags || []).join('; '),
       shift.note || ''
     ];
@@ -159,15 +167,17 @@ export function downloadSummaryCSV(shifts: HistoryRec[], preferences?: Preferenc
     `Total Net Working Time,${hoursToText(totalNetHours)}`,
     `Total Break Time,${hoursToText(totalBreakHours)}`,
     `Total Overtime,${hoursToText(totalOvertimeHours)}`,
-    `Total Earnings,${totalEarnings.toFixed(2)}`,
+    `Hourly Rate,${hourlyRate > 0 ? hourlyRate.toFixed(2) : 'N/A'}`,
+    `Total Earnings,${totalEarnings > 0 ? totalEarnings.toFixed(2) : 'N/A'}`,
     `Average Shift Length,${hoursToText((shifts.reduce((a, r) => a + r.netMs, 0) / 3600000) / totalShifts)}`,
     '',
     // Detailed shifts
-    'Date,Start Time,End Time,Duration (HH:MM),Break Time (HH:MM),Net Working Time (HH:MM),Overtime (HH:MM),Tags,Notes',
+    'Date,Start Time,End Time,Duration (HH:MM),Break Time (HH:MM),Net Working Time (HH:MM),Overtime (HH:MM),Hourly Rate,Earnings,Tags,Notes',
     ...shifts.map(shift => {
       const netHours = shift.netMs / 3600000;
       const overtimeHours = Math.max(0, netHours - 7);
       const overtimeHhMm = hoursToText(overtimeHours);
+      const shiftEarnings = hourlyRate > 0 ? netHours * hourlyRate : 0;
       
       return [
         formatDate(shift.startMs),
@@ -177,6 +187,8 @@ export function downloadSummaryCSV(shifts: HistoryRec[], preferences?: Preferenc
         msToHhMm(shift.breakMs),
         msToHhMm(shift.netMs),
         overtimeHhMm,
+        hourlyRate > 0 ? hourlyRate.toFixed(2) : 'N/A',
+        shiftEarnings > 0 ? shiftEarnings.toFixed(2) : 'N/A',
         (shift.tags || []).join('; '),
         shift.note || ''
       ].map(escapeCsvField).join(',');
@@ -206,7 +218,7 @@ export function downloadSummaryCSV(shifts: HistoryRec[], preferences?: Preferenc
  * Export shifts with both human-readable and raw data for perfect import compatibility
  * This ensures the exported CSV can be imported on any device without data loss
  */
-export function downloadCompatibleCSV(shifts: HistoryRec[]): void {
+export function downloadCompatibleCSV(shifts: HistoryRec[], preferences?: Preferences): void {
   if (shifts.length === 0) {
     alert('No shifts to export');
     return;
@@ -228,7 +240,9 @@ export function downloadCompatibleCSV(shifts: HistoryRec[]): void {
     'duration_hhmm',
     'break_time_hhmm',
     'net_working_hhmm',
-    'overtime_hhmm'
+    'overtime_hhmm',
+    'hourly_rate',
+    'earnings'
   ];
 
   // CSV rows
@@ -237,6 +251,10 @@ export function downloadCompatibleCSV(shifts: HistoryRec[]): void {
     const targetDailyHours = 7;
     const overtimeHours = Math.max(0, netHours - targetDailyHours);
     const overtimeHhMm = `${Math.floor(overtimeHours)}:${Math.round((overtimeHours % 1) * 60).toString().padStart(2, '0')}`;
+    
+    // Calculate earnings using preferences hourly rate
+    const hourlyRate = preferences?.hourlyRate || 0;
+    const earnings = hourlyRate > 0 ? netHours * hourlyRate : 0;
     
     return [
       // Raw data (primary for import)
@@ -253,7 +271,9 @@ export function downloadCompatibleCSV(shifts: HistoryRec[]): void {
       msToHhMm(shift.endMs - shift.startMs),
       msToHhMm(shift.breakMs),
       msToHhMm(shift.netMs),
-      overtimeHhMm
+      overtimeHhMm,
+      hourlyRate > 0 ? hourlyRate.toFixed(2) : 'N/A',
+      earnings > 0 ? earnings.toFixed(2) : 'N/A'
     ];
   });
 

@@ -413,7 +413,13 @@ export default function Stopwatch({ snap, setSnap }: Props) {
               <div className="text-3xl font-bold text-blue-400">
                 {workedHours >= targetNetHours 
                   ? 'Target Met!' 
-                  : fmtClock(startTimeMs + (targetNetHours * 3600000), fmt)
+                  : (() => {
+                      // Calculate total session duration needed (including breaks) to achieve target net hours
+                      const totalBreakTimeMs = breaks.reduce((acc, b) => acc + (b.endMs || now) - b.startMs, 0);
+                      const totalSessionDurationMs = (targetNetHours * 3600000) + totalBreakTimeMs;
+                      const estimatedEndTime = startTimeMs + totalSessionDurationMs;
+                      return fmtClock(estimatedEndTime, fmt);
+                    })()
                 }
               </div>
               <div className="text-xs text-slate-500">{workedHours >= targetNetHours ? 'You\'ve exceeded your daily goal' : `${hoursToText(remainingNetHours)} remaining`}</div>

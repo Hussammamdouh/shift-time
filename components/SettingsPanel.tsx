@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import type { Snapshot } from '@/lib/types';
 import { setPasscode, disableLock, isLockEnabled } from '@/lib/passcode';
+import { autoSync } from '@/lib/sync';
 
 // Helper function to format currency
 function formatCurrency(amount: number, currency: string = 'USD'): string {
@@ -20,6 +21,40 @@ export default function SettingsPanel({ snap, setSnap }: { snap: Snapshot; setSn
   useEffect(() => {
     setLockStatus(isLockEnabled());
   }, []);
+
+  // Auto-trigger sync when sync settings change
+  useEffect(() => {
+    const code = snap.prefs.syncCode?.trim();
+    if (snap.prefs.autoSync && code) {
+      // Trigger sync after a short delay to avoid too frequent calls
+      const timer = setTimeout(async () => {
+        try {
+          setMessage('Auto-syncing...');
+          const result = await autoSync(
+            code, 
+            snap, 
+            setSnap, 
+            (error) => setMessage(`Auto-sync error: ${error}`)
+          );
+          
+          if (result.success) {
+            setMessage(`Auto-sync successful: ${result.message}`);
+            // Clear success message after 3 seconds
+            setTimeout(() => setMessage(''), 3000);
+          } else {
+            setMessage(`Auto-sync failed: ${result.message}`);
+            // Clear error message after 5 seconds
+            setTimeout(() => setMessage(''), 5000);
+          }
+        } catch (error) {
+          setMessage(`Auto-sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          setTimeout(() => setMessage(''), 5000);
+        }
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [snap.prefs.autoSync, snap.prefs.syncCode, snap]);
 
   async function handleSetPasscode() {
     if (newPasscode !== confirmPasscode) {
@@ -404,6 +439,44 @@ export default function SettingsPanel({ snap, setSnap }: { snap: Snapshot; setSn
               />
               <label htmlFor="autoSync" className="text-slate-300">Auto-sync on changes</label>
             </div>
+          </div>
+          <div className="space-y-3">
+            <label className="form-label flex items-center space-x-2">
+              <svg className="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span>Test Sync</span>
+            </label>
+            <button 
+              className="btn btn-primary w-full" 
+              onClick={async () => {
+                if (!snap.prefs.syncCode?.trim()) return;
+                
+                setMessage('Testing sync...');
+                try {
+                  const result = await autoSync(
+                    snap.prefs.syncCode.trim(), 
+                    snap, 
+                    setSnap, 
+                    (error) => setMessage(`Sync error: ${error}`)
+                  );
+                  
+                  if (result.success) {
+                    setMessage(`Sync test successful: ${result.message}`);
+                  } else {
+                    setMessage(`Sync test failed: ${result.message}`);
+                  }
+                } catch (error) {
+                  setMessage(`Sync test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                }
+              }}
+              disabled={!snap.prefs.syncCode?.trim()}
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Test Sync
+            </button>
           </div>
         </div>
       </div>
