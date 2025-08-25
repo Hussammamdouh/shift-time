@@ -19,7 +19,7 @@ const requiredEnvVars = {
 if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   console.log('Firebase Environment Variables:', {
     API_KEY: requiredEnvVars.NEXT_PUBLIC_FIREBASE_API_KEY ? '✓ Set' : '✗ Missing',
-    AUTH_DOMAIN: requiredEnvVars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ? '✓ Set' : '✗ Missing',
+    AUTH_DOMAIN: requiredEnvVars.NEXT_PUBLIC_FIREBASE_API_KEY ? '✓ Set' : '✗ Missing',
     PROJECT_ID: requiredEnvVars.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? '✓ Set' : '✗ Missing',
     STORAGE_BUCKET: requiredEnvVars.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ? '✓ Set' : '✗ Missing',
     MESSAGING_SENDER_ID: requiredEnvVars.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ? '✓ Set' : '✗ Missing',
@@ -66,6 +66,7 @@ if (hasValidConfig) {
     app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
+    
     console.log('Firebase initialized successfully');
   } catch (error) {
     console.error('Failed to initialize Firebase:', error);
@@ -95,10 +96,65 @@ export async function ensureAnonSignIn() {
       console.log('Attempting anonymous sign in...');
       await signInAnonymously(auth!);
       console.log('Anonymous sign in successful');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to sign in anonymously:', error);
+      
+      // Handle specific Firebase errors
+      if (error && typeof error === 'object' && 'code' in error) {
+        const errorObj = error as { code?: string };
+        if (errorObj.code === 'auth/unauthorized-domain') {
+          console.error('Domain not authorized. Add your domain to Firebase Console > Authentication > Settings > Authorized domains');
+        } else if (errorObj.code === 'auth/quota-exceeded') {
+          console.error('Firebase quota exceeded. Please upgrade your plan.');
+        }
+      }
+      
       return null;
     }
   }
   return auth?.currentUser || null;
+}
+
+/** Check if Firebase is available and handle quota errors gracefully */
+export function isFirebaseAvailable() {
+  return hasValidConfig && app !== null && auth !== null && db !== null;
+}
+
+/** Get Firestore with error handling */
+export function getFirestoreWithErrorHandling() {
+  if (!isFirebaseAvailable()) {
+    throw new Error('Firebase is not available. Please check your configuration.');
+  }
+  return db!;
+}
+
+/** Handle Firebase operations with quota error fallback */
+export async function withQuotaErrorHandling<T>(
+  operation: () => Promise<T>,
+  fallback: T,
+  errorMessage: string = 'Operation failed due to quota exceeded'
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error: unknown) {
+    if (isQuotaExceededError(error)) {
+      console.error(`${errorMessage}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.warn('Using fallback value due to Firebase quota exceeded');
+      return fallback;
+    }
+    throw error;
+  }
+}
+
+/** Check if the current error is a quota exceeded error */
+export function isQuotaExceededError(error: unknown): boolean {
+  if (error && typeof error === 'object' && 'code' in error) {
+    const errorObj = error as { code?: string; message?: string };
+    return Boolean(
+      errorObj.code === 'resource-exhausted' || 
+      (errorObj.message && errorObj.message.includes('Quota exceeded')) ||
+      (errorObj.message && errorObj.message.includes('quota exceeded'))
+    );
+  }
+  return false;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Snapshot } from '@/lib/types';
 import { loadLocal, saveLocal } from '@/lib/storage';
@@ -43,6 +43,13 @@ function HomeContent() {
   const initialTab = searchParams.get('tab') as 'watch' | 'manual' | 'report' | 'sync' | 'settings' || 'watch';
   const [tab, setTab] = useState<'watch' | 'manual' | 'report' | 'sync' | 'settings'>(initialTab);
   const [liveSyncUnsub, setLiveSyncUnsub] = useState<(() => void) | null>(null);
+  
+  // Use ref to track sync state and prevent infinite loops
+  const syncStateRef = useRef({
+    lastSyncCode: '',
+    lastAutoSync: false,
+    isInitialized: false
+  });
 
   useEffect(() => {
     const urlTab = searchParams.get('tab') as 'watch' | 'manual' | 'report' | 'sync' | 'settings';
@@ -91,42 +98,61 @@ function HomeContent() {
     return () => clearInterval(interval);
   }, [snap.currentDeviceId, snap.devices]);
 
+  // Memoize the sync function to prevent infinite loops
+  const startLiveSync = useCallback(async () => {
+    const currentSyncCode = snap.prefs.syncCode?.trim();
+    const currentAutoSync = snap.prefs.autoSync;
+    
+    if (!currentSyncCode || !currentAutoSync) {
+      // Clean up existing sync if disabled
+      if (liveSyncUnsub) {
+        liveSyncUnsub();
+        setLiveSyncUnsub(null);
+      }
+      return;
+    }
+
+    try {
+      // First, push current data to ensure it's available to other devices
+      await pushSnapshot(currentSyncCode, snap);
+      
+      // Then start real-time subscription
+      const unsubscribe = await subscribeRoom(currentSyncCode, (remote) => {
+        if (remote && remote.updatedAt > snap.updatedAt) {
+          // Only update if remote data is newer
+          setSnap(prevSnap => ({
+            ...remote,
+            currentDeviceId: prevSnap.currentDeviceId, // Preserve current device ID
+            devices: [
+              ...(remote.devices || []).filter(d => d.id !== prevSnap.currentDeviceId),
+              ...(prevSnap.devices || []).filter(d => d.id === prevSnap.currentDeviceId)
+            ]
+          }));
+        }
+      });
+      
+      setLiveSyncUnsub(() => unsubscribe);
+    } catch (error) {
+      console.error('Auto LiveSync failed:', error);
+    }
+  }, [snap.prefs.syncCode, snap.prefs.autoSync, snap, liveSyncUnsub]);
+
   // Auto-start LiveSync when sync code is configured
   useEffect(() => {
-    const startLiveSync = async () => {
-      if (!snap.prefs.syncCode?.trim() || !snap.prefs.autoSync) {
-        // Clean up existing sync if disabled
-        if (liveSyncUnsub) {
-          liveSyncUnsub();
-          setLiveSyncUnsub(null);
-        }
-        return;
-      }
-
-      try {
-        // First, push current data to ensure it's available to other devices
-        await pushSnapshot(snap.prefs.syncCode, snap);
-        
-        // Then start real-time subscription
-        const unsubscribe = await subscribeRoom(snap.prefs.syncCode, (remote) => {
-          if (remote && remote.updatedAt > snap.updatedAt) {
-            // Only update if remote data is newer
-            setSnap(prevSnap => ({
-              ...remote,
-              currentDeviceId: prevSnap.currentDeviceId, // Preserve current device ID
-              devices: [
-                ...(remote.devices || []).filter(d => d.id !== prevSnap.currentDeviceId),
-                ...(prevSnap.devices || []).filter(d => d.id === prevSnap.currentDeviceId)
-              ]
-            }));
-          }
-        });
-        
-        setLiveSyncUnsub(() => unsubscribe);
-      } catch (error) {
-        console.error('Auto LiveSync failed:', error);
-      }
-    };
+    const currentSyncCode = snap.prefs.syncCode?.trim();
+    const currentAutoSync = snap.prefs.autoSync;
+    
+    // Only run if sync settings actually changed
+    if (syncStateRef.current.lastSyncCode === currentSyncCode && 
+        syncStateRef.current.lastAutoSync === currentAutoSync &&
+        syncStateRef.current.isInitialized) {
+      return;
+    }
+    
+    // Update ref
+    syncStateRef.current.lastSyncCode = currentSyncCode || '';
+    syncStateRef.current.lastAutoSync = currentAutoSync;
+    syncStateRef.current.isInitialized = true;
 
     startLiveSync();
 
@@ -136,23 +162,31 @@ function HomeContent() {
         liveSyncUnsub();
       }
     };
-  }, [snap.prefs.syncCode, snap.prefs.autoSync, snap.updatedAt, liveSyncUnsub, snap]);
+  }, [startLiveSync, liveSyncUnsub]); // Clean dependencies
 
   // Enhanced setSnap that automatically syncs to cloud when LiveSync is active
   const setSnapWithSync = (newSnap: Snapshot | ((prev: Snapshot) => Snapshot)) => {
     setSnap(prevSnap => {
       const updatedSnap = typeof newSnap === 'function' ? newSnap(prevSnap) : newSnap;
       
-      // Auto-sync to cloud if LiveSync is active
+      // Auto-sync to cloud if LiveSync is active - with debouncing to prevent excessive writes
       if (liveSyncUnsub && snap.prefs.syncCode?.trim()) {
-        // Use setTimeout to avoid blocking the UI update
+        // Debounce sync operations to prevent excessive Firestore writes
         setTimeout(async () => {
           try {
-            await pushSnapshot(snap.prefs.syncCode!, updatedSnap);
+            // Only sync if data has actually changed significantly
+            const hasSignificantChanges = 
+              updatedSnap.updatedAt !== prevSnap.updatedAt ||
+              updatedSnap.history.length !== prevSnap.history.length ||
+              updatedSnap.watch.status !== prevSnap.watch.status;
+            
+            if (hasSignificantChanges) {
+              await pushSnapshot(snap.prefs.syncCode!, updatedSnap);
+            }
           } catch (error) {
             console.error('Auto-sync failed:', error);
           }
-        }, 0);
+        }, 1000); // Wait 1 second before syncing to batch changes
       }
       
       return updatedSnap;

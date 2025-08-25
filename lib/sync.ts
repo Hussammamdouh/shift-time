@@ -24,6 +24,9 @@ function isFirebaseAvailable() {
   return db !== null;
 }
 
+// Debouncing mechanism to prevent excessive writes
+const syncDebounceMap = new Map<string, NodeJS.Timeout>();
+
 /** Pull snapshot from Firestore (if it exists) */
 export async function pullSnapshot(passcode: string): Promise<Snapshot | null> {
   try {
@@ -45,7 +48,7 @@ export async function pullSnapshot(passcode: string): Promise<Snapshot | null> {
   }
 }
 
-/** Push (upsert) snapshot to Firestore */
+/** Push (upsert) snapshot to Firestore with debouncing */
 export async function pushSnapshot(passcode: string, snapshot: Snapshot): Promise<boolean> {
   try {
     if (!isFirebaseAvailable()) {
@@ -53,10 +56,29 @@ export async function pushSnapshot(passcode: string, snapshot: Snapshot): Promis
       return false;
     }
     
-    await ensureAnonSignIn();
+    // Debounce rapid successive calls to prevent excessive writes
     const roomId = await roomIdFromPasscode(passcode);
-    const ref = doc(db!, 'rooms', roomId);
-    await setDoc(ref, snapshot);
+    const existingTimeout = syncDebounceMap.get(roomId);
+    
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+    
+    // Set a new timeout for the actual write
+    const timeoutId = setTimeout(async () => {
+      try {
+        await ensureAnonSignIn();
+        const ref = doc(db!, 'rooms', roomId);
+        await setDoc(ref, snapshot);
+        console.log('Snapshot synced to Firestore successfully');
+      } catch (error) {
+        console.error('Debounced push failed:', error);
+      } finally {
+        syncDebounceMap.delete(roomId);
+      }
+    }, 2000); // Wait 2 seconds before writing to batch rapid changes
+    
+    syncDebounceMap.set(roomId, timeoutId);
     return true;
   } catch (error) {
     console.error('Push failed:', error);

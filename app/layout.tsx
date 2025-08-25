@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import '../styles/globals.css';
+import FirebaseErrorHandler from '@/components/FirebaseErrorHandler';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -77,20 +78,22 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className={`${inter.className} antialiased`}>
-        <div id="root" className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 pb-[env(safe-area-inset-bottom)] aurora-bg">
-          {/* Subtle Background Elements (performance-friendly) */}
-          <div className="fixed inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute -top-16 -left-16 w-80 h-80 bg-violet-600/10 rounded-full blur-3xl"></div>
-            <div className="absolute -bottom-24 right-0 w-[28rem] h-[28rem] bg-cyan-600/10 rounded-full blur-3xl"></div>
-            <div className="absolute inset-0 bg-grid opacity-10"></div>
-            <div className="absolute inset-0 bg-gradient-to-br from-slate-950/70 via-slate-900/60 to-slate-950/70"></div>
-          </div>
+        <FirebaseErrorHandler>
+          <div id="root" className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 pb-[env(safe-area-inset-bottom)] aurora-bg">
+            {/* Subtle Background Elements (performance-friendly) */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+              <div className="absolute -top-16 -left-16 w-80 h-80 bg-violet-600/10 rounded-full blur-3xl"></div>
+              <div className="absolute -bottom-24 right-0 w-[28rem] h-[28rem] bg-cyan-600/10 rounded-full blur-3xl"></div>
+              <div className="absolute inset-0 bg-grid opacity-10"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-950/70 via-slate-900/60 to-slate-950/70"></div>
+            </div>
 
-          {/* Main Content */}
-          <div className="relative z-10">
-            {children}
+            {/* Main Content */}
+            <div className="relative z-10">
+              {children}
+            </div>
           </div>
-        </div>
+        </FirebaseErrorHandler>
       </body>
     </html>
   );
