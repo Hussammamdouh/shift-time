@@ -9,18 +9,20 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Modern dark theme palette
+        // Modern dark theme palette (deeper, higher contrast)
         gray: {
-          950: '#0a0a0a',
-          900: '#111111',
-          800: '#1a1a1a',
-          700: '#2a2a2a',
-          600: '#404040',
-          500: '#737373',
-          400: '#a3a3a3',
-          300: '#d4d4d4',
-          200: '#e5e5e5',
-          100: '#f5f5f5',
+          950: '#0b0f1a',
+          900: '#0e1422',
+          850: '#121a2b',
+          800: '#162036',
+          750: '#1b2742',
+          700: '#22304f',
+          600: '#344358',
+          500: '#5b6b7f',
+          400: '#9aa5b1',
+          300: '#c6cdd6',
+          200: '#e2e7ed',
+          100: '#f5f7fa',
         },
         // Accent colors
         blue: {
@@ -45,6 +47,9 @@ module.exports = {
           primary: '#6366f1',
           secondary: '#8b5cf6',
           accent: '#06b6d4',
+          surface: '#0e1422',
+          surfaceSoft: '#121a2b',
+          surfaceElevated: '#162036',
         }
       },
       fontFamily: {

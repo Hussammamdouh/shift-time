@@ -77,21 +77,15 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className={`${inter.className} antialiased`}>
-        <div id="root" className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 bg-pattern">
-          {/* Animated Background Elements */}
+        <div id="root" className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 pb-[env(safe-area-inset-bottom)] aurora-bg">
+          {/* Subtle Background Elements (performance-friendly) */}
           <div className="fixed inset-0 overflow-hidden pointer-events-none">
-            {/* Floating Orbs */}
-            <div className="absolute top-20 left-20 w-72 h-72 bg-violet-500/10 rounded-full blur-3xl animate-pulse animate-delay-1000"></div>
-            <div className="absolute top-40 right-20 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse animate-delay-500"></div>
-            <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl animate-pulse animate-delay-700"></div>
-            
-            {/* Grid Pattern */}
-            <div className="absolute inset-0 bg-grid opacity-20"></div>
-            
-            {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-slate-800/60 to-slate-900/80"></div>
+            <div className="absolute -top-16 -left-16 w-80 h-80 bg-violet-600/10 rounded-full blur-3xl"></div>
+            <div className="absolute -bottom-24 right-0 w-[28rem] h-[28rem] bg-cyan-600/10 rounded-full blur-3xl"></div>
+            <div className="absolute inset-0 bg-grid opacity-10"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-950/70 via-slate-900/60 to-slate-950/70"></div>
           </div>
-          
+
           {/* Main Content */}
           <div className="relative z-10">
             {children}

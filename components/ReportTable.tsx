@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { downloadSummaryCSV, downloadCompatibleCSV } from '../lib/csv';
 import { shiftSummary, hoursToText } from '../lib/timeUtils';
 import EditShiftModal from './EditShiftModal';
+import SectionHeader from './SectionHeader';
 import type { HistoryRec, Snapshot } from '../lib/types';
 
 type Props = { 
@@ -306,20 +307,19 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
     <div className="space-y-12">
       {/* Enhanced Statistics Dashboard */}
       <div className="space-y-8">
-        <div className="flex items-center space-x-4">
-          <div className="w-10 h-10 bg-gradient-to-r from-violet-600 to-cyan-600 rounded-xl flex items-center justify-center shadow-glow">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <SectionHeader
+          title="Performance Overview"
+          subtitle="Your shift statistics and insights"
+          size="lg"
+          icon={(
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-200">Performance Overview</h2>
-            <p className="text-slate-400">Your shift statistics and insights</p>
-          </div>
-        </div>
+          )}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          <div className="card text-center space-y-4 card-hover">
+          <div className="card text-center space-y-4 card-hover tilt">
             <div className="w-16 h-16 bg-gradient-to-br from-violet-600 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto shadow-glow">
               <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -331,7 +331,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
             </div>
           </div>
 
-          <div className="card text-center space-y-4 card-hover">
+          <div className="card text-center space-y-4 card-hover tilt">
             <div className="w-16 h-16 bg-gradient-to-br from-emerald-600 to-green-600 rounded-2xl flex items-center justify-center mx-auto shadow-glow-green">
               <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -343,7 +343,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
             </div>
           </div>
 
-          <div className="card text-center space-y-4 card-hover">
+          <div className="card text-center space-y-4 card-hover tilt">
             <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto shadow-glow-blue">
               <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -355,7 +355,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
             </div>
           </div>
 
-          <div className="card text-center space-y-4 card-hover">
+          <div className="card text-center space-y-4 card-hover tilt">
             <div className="w-16 h-16 bg-gradient-to-br from-yellow-600 to-orange-600 rounded-2xl flex items-center justify-center">
               <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -410,19 +410,15 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
       {/* Enhanced Filters and Actions */}
       <div className="card space-y-8">
         {/* Enhanced Header Section */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="w-10 h-10 bg-gradient-to-r from-violet-600 to-cyan-600 rounded-xl flex items-center justify-center shadow-glow">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-200">Data Management</h3>
-              <p className="text-slate-400">Filter, sort, and manage your shift data</p>
-            </div>
-          </div>
-        </div>
+        <SectionHeader
+          title="Data Management"
+          subtitle="Filter, sort, and manage your shift data"
+          icon={(
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+          )}
+        />
 
         {/* Reorganized Controls Section */}
         <div className="space-y-6">
@@ -617,17 +613,15 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
       {/* Enhanced Shifts Table */}
       <div className="card space-y-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <SectionHeader
+            title="Shift History"
+            subtitle="Detailed view of all your recorded shifts"
+            icon={(
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-slate-200">Shift History</h3>
-              <p className="text-sm text-slate-400">Detailed view of all your recorded shifts</p>
-            </div>
-          </div>
+            )}
+          />
           
           {/* Enhanced Table Controls */}
           <div className="flex items-center space-x-3">
@@ -649,7 +643,8 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Desktop Table */}
+        <div className="overflow-x-auto hidden md:block">
           <table className="table">
             <thead>
               <tr className="border-b border-slate-700/50">
@@ -814,6 +809,53 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Stacked Cards */}
+        <div className="md:hidden space-y-4">
+          {filteredShifts.map((shift) => {
+            const summary = shiftSummary(shift.startMs, shift.endMs, shift.breaks, snap.prefs.hourFormat);
+            const isToday = new Date(shift.startMs).toDateString() === new Date().toDateString();
+            return (
+              <div key={shift.id} className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className={`font-semibold ${isToday ? 'text-emerald-400' : 'text-slate-200'}`}>{formatDate(shift.startMs)}</div>
+                    <div className="text-xs text-slate-500">{formatTime(shift.startMs)} – {formatTime(shift.endMs)}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-slate-200">{summary.net}</div>
+                    <div className="text-xs text-slate-500">Breaks {summary.breakTotal}</div>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center justify-between">
+                  <div className="text-xs text-slate-400">
+                    Overtime: <span className={`${summary.overtimeHours > 0 ? 'text-orange-400' : 'text-slate-400'}`}>{summary.overtime}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="btn btn-ghost btn-sm p-2 hover:bg-slate-700/50"
+                      onClick={() => openEditModal(shift)}
+                      title="Edit Shift"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button
+                      className="btn btn-danger btn-sm p-2 hover:bg-red-600/20"
+                      onClick={() => onDelete(shift.id)}
+                      title="Delete Shift"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {filteredShifts.length === 0 && (

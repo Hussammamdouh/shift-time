@@ -220,7 +220,7 @@ function HomeContent() {
   const currentTab = tabConfig[tab];
 
   return (
-    <div className="min-h-screen">
+    <div className={`min-h-screen ${snap.prefs.compactMode ? 'compact' : ''}`}>
       {/* Enhanced Top Navigation Bar */}
       <header className="sticky top-0 z-40 glass-nav border-b border-slate-700/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -233,7 +233,7 @@ function HomeContent() {
                 </svg>
               </div>
               <div>
-                <h1 className="text-2xl lg:text-3xl font-bold gradient-text-animate">
+                <h1 className="text-2xl lg:text-3xl font-bold gradient-text-animate ribbon">
                   Shift Tracker
                 </h1>
                 <p className="text-sm lg:text-base text-slate-400 hidden sm:block">Professional Time Management</p>
@@ -291,7 +291,7 @@ function HomeContent() {
       </header>
 
       {/* Enhanced Main Dashboard Layout */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-12 pb-28 md:pb-12">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 lg:gap-12">
           
           {/* Enhanced Left Sidebar Navigation */}
@@ -357,14 +357,20 @@ function HomeContent() {
               {/* Removed sync message and state as autoSync is removed */}
 
               {/* Enhanced Page Header */}
-              <div className="card space-y-6">
+              <div className={`card space-y-6 relative overflow-hidden aurora-bg parallax ${
+                tab === 'watch' ? 'aurora-accent-watch' :
+                tab === 'manual' ? 'aurora-accent-manual' :
+                tab === 'report' ? 'aurora-accent-report' :
+                tab === 'sync' ? 'aurora-accent-sync' :
+                'aurora-accent-settings'
+              }`}>
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                   <div className="flex items-center space-x-6">
                     <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl bg-gradient-to-r ${currentTab.color} shadow-glow`}>
                       {currentTab.icon}
                     </div>
                     <div>
-                      <h2 className="text-3xl lg:text-4xl font-bold text-gradient">
+                      <h2 className="text-3xl lg:text-4xl font-bold text-gradient ribbon">
                         {currentTab.title}
                       </h2>
                       <p className="text-slate-400 mt-2 lg:text-lg">

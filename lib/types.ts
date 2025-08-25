@@ -45,6 +45,7 @@ export type Preferences = {
   vacationDate?: string; // New: Date picker for adding vacation days
   autoSync: boolean;
   syncCode: string;
+  compactMode?: boolean; // New: Compact UI scale for mobile-like layout
 };
 
 export type Snapshot = {

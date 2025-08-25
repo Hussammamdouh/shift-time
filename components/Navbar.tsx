@@ -83,20 +83,8 @@ export default function Navbar({ tab, setTab }: Props) {
 
   return (
     <>
-      {/* Enhanced Desktop Navigation */}
+      {/* Enhanced Desktop Navigation (header removed for compactness) */}
       <nav className="hidden lg:block space-y-4">
-        <div className="text-center pb-4 border-b border-slate-700/50">
-          <div className="flex items-center justify-center space-x-3 mb-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-violet-600 to-cyan-600 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </div>
-            <h2 className="text-lg font-semibold text-slate-200">Navigation</h2>
-          </div>
-          <p className="text-sm text-slate-400">Quick access to features</p>
-        </div>
-        
         <div className="space-y-3">
           {(Object.keys(tabConfig) as Tab[]).map((tabKey, index) => {
             const config = tabConfig[tabKey];
@@ -165,7 +153,7 @@ export default function Navbar({ tab, setTab }: Props) {
         </div>
       </nav>
 
-      {/* Enhanced Mobile Navigation Toggle */}
+      {/* Enhanced Mobile Navigation */}
       <div className="lg:hidden">
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -238,6 +226,8 @@ export default function Navbar({ tab, setTab }: Props) {
           </div>
         )}
       </div>
+
+      
     </>
   );
 }

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { Snapshot } from '@/lib/types';
 import { computeNetMs, fromLocalDT, msToHhMm } from '@/lib/timeUtils';
 import AnnotateBar from './AnnotateBar';
+import SectionHeader from './SectionHeader';
 
 type Props = { snap: Snapshot; setSnap: (s: Snapshot) => void };
 
@@ -63,17 +64,16 @@ export default function ManualForm({ snap, setSnap }: Props) {
     <div className="space-y-8">
       {/* Enhanced Header */}
       <div className="card space-y-6">
-        <div className="flex items-center space-x-4">
-          <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-glow">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <SectionHeader
+          title="Manual Entry"
+          subtitle="Calculate working time excluding breaks"
+          size="lg"
+          icon={(
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-200">Manual Entry</h2>
-            <p className="text-slate-400">Calculate working time excluding breaks</p>
-          </div>
-        </div>
+          )}
+        />
 
         {/* Enhanced Time Inputs */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -110,30 +110,28 @@ export default function ManualForm({ snap, setSnap }: Props) {
 
       {/* Enhanced Breaks Section */}
       <div className="card space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-slate-200">Break Management</h3>
-              <p className="text-sm text-slate-400">Add and manage break periods</p>
-            </div>
-          </div>
-          <button 
-            className={`btn btn-sm ${start && end ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={addBreak}
-            disabled={!start || !end}
-            title={!start || !end ? 'Set start and end times first' : 'Add a break period'}
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        <SectionHeader
+          title="Break Management"
+          subtitle="Add and manage break periods"
+          icon={(
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Add Break
-          </button>
-        </div>
+          )}
+          actions={(
+            <button 
+              className={`btn btn-sm ${start && end ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={addBreak}
+              disabled={!start || !end}
+              title={!start || !end ? 'Set start and end times first' : 'Add a break period'}
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Add Break
+            </button>
+          )}
+        />
 
         {breaks.length === 0 && (
           <div className="text-center py-8 text-slate-500 border-2 border-dashed border-slate-700 rounded-2xl">
@@ -191,17 +189,15 @@ export default function ManualForm({ snap, setSnap }: Props) {
 
       {/* Enhanced Annotations */}
       <div className="card space-y-6">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg flex items-center justify-center">
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <SectionHeader
+          title="Notes & Tags"
+          subtitle="Add context and organization"
+          icon={(
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-slate-200">Notes & Tags</h3>
-            <p className="text-sm text-slate-400">Add context and organization</p>
-          </div>
-        </div>
+          )}
+        />
         
         <AnnotateBar
           note={note}
@@ -213,17 +209,15 @@ export default function ManualForm({ snap, setSnap }: Props) {
       {/* Enhanced Preview */}
       {preview && (
         <div className="card space-y-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          <SectionHeader
+            title="Time Summary"
+            subtitle="Preview of your shift calculation"
+            icon={(
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2m0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-slate-200">Time Summary</h3>
-              <p className="text-sm text-slate-400">Preview of your shift calculation</p>
-            </div>
-          </div>
+            )}
+          />
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="p-4 bg-emerald-500/20 rounded-xl border border-emerald-500/30">

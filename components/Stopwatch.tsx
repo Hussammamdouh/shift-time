@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import type { Snapshot } from '@/lib/types';
 import { msToHhMm, fmtClock, hoursToText } from '@/lib/timeUtils';
 import ProgressRing from './ProgressRing';
+import SectionHeader from './SectionHeader';
 import EditShiftModal from './EditShiftModal';
 
 type Props = { 
@@ -122,7 +123,7 @@ export default function Stopwatch({ snap, setSnap }: Props) {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         
         {/* Enhanced Central Timer Card */}
-        <div className="xl:col-span-2 card text-center space-y-8">
+        <div className="xl:col-span-2 card text-center space-y-8 tilt">
           <div className="space-y-8">
             <div className="flex flex-col sm:flex-row items-center justify-center space-y-6 sm:space-y-0 sm:space-x-8">
               <div className={`w-24 h-24 sm:w-28 sm:h-28 bg-gradient-to-br from-emerald-500 via-emerald-400 to-green-500 rounded-3xl flex items-center justify-center shadow-glow-green float ${onWork ? 'pulse-glow' : ''}`}>
@@ -211,15 +212,15 @@ export default function Stopwatch({ snap, setSnap }: Props) {
         {/* Enhanced Stats & Info Sidebar */}
         <div className="space-y-6">
           {/* Enhanced Target & Progress */}
-          <div className="card space-y-6">
-            <div className="flex items-center space-x-3 pb-3 border-b border-slate-700/50">
-              <div className="w-8 h-8 bg-gradient-to-r from-violet-600 to-cyan-600 rounded-lg flex items-center justify-center">
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="card space-y-6 tilt">
+            <SectionHeader
+              title="Session Goals"
+              icon={(
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-slate-200">Session Goals</h3>
-            </div>
+              )}
+            />
             <div className="space-y-4">
               <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:bg-slate-800/70 transition-colors duration-300">
                 <span className="text-slate-400">Target Net Time</span>
@@ -233,20 +234,59 @@ export default function Stopwatch({ snap, setSnap }: Props) {
                 <span className="text-slate-400">Remaining</span>
                 <span className="font-mono font-bold text-blue-400">{hoursToText(Math.max(0, targetNetHours - workedHours))}</span>
               </div>
+              <div className="section-divider" />
+              {/* Sidebar Session Controls (desktop/tablet) */}
+              <div className="grid grid-cols-2 gap-3">
+                <button 
+                  className={`btn ${onIdle ? 'btn-success' : 'btn-secondary'} h-12 text-sm font-semibold`} 
+                  onClick={start} 
+                  disabled={!onIdle}
+                >
+                  Start
+                </button>
+                <button 
+                  className="btn btn-secondary h-12 text-sm font-semibold" 
+                  onClick={takeBreak} 
+                  disabled={!onWork}
+                >
+                  Break
+                </button>
+                <button 
+                  className="btn btn-secondary h-12 text-sm font-semibold" 
+                  onClick={back} 
+                  disabled={!onBreak}
+                >
+                  Back
+                </button>
+                <button 
+                  className="btn btn-danger h-12 text-sm font-semibold" 
+                  onClick={end} 
+                  disabled={onIdle}
+                >
+                  End
+                </button>
+                <button 
+                  className="btn btn-ghost col-span-2 h-12 text-sm font-semibold" 
+                  onClick={() => setEditOpen(true)} 
+                  disabled={onIdle}
+                >
+                  Edit Session
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Enhanced Session Info */}
           {startTimeMs && (
-            <div className="card space-y-6">
-              <div className="flex items-center space-x-3 pb-3 border-b border-slate-700/50">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="card space-y-6 tilt">
+              <SectionHeader
+                title="Session Details"
+                icon={(
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                </div>
-                <h3 className="text-xl font-semibold text-slate-200">Session Details</h3>
-              </div>
+                )}
+              />
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:bg-slate-800/70 transition-colors duration-300">
                   <span className="text-slate-400">Started</span>
@@ -272,82 +312,72 @@ export default function Stopwatch({ snap, setSnap }: Props) {
         </div>
       </div>
 
-      {/* Enhanced Control Panel */}
-      <div className="card space-y-8">
-        <div className="text-center">
-          <h3 className="text-2xl font-semibold text-slate-200 mb-3">Session Controls</h3>
-          <p className="text-slate-400 text-lg">Manage your work session</p>
-        </div>
-        
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-6">
-          <button 
-            className={`btn ${onIdle ? 'btn-success' : 'btn-secondary'} col-span-2 sm:col-span-1 h-16 text-lg font-semibold`} 
-            onClick={start} 
-            disabled={!onIdle}
-          >
-            <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Start
-          </button>
-          
-          <button 
-            className="btn btn-secondary h-16 text-lg font-semibold" 
-            onClick={takeBreak} 
-            disabled={!onWork}
-          >
-            <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Break
-          </button>
-          
-          <button 
-            className="btn btn-secondary h-16 text-lg font-semibold" 
-            onClick={back} 
-            disabled={!onBreak}
-          >
-            <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-            </svg>
-            Back
-          </button>
-          
-          <button 
-            className="btn btn-danger h-16 text-lg font-semibold" 
-            onClick={end} 
-            disabled={onIdle}
-          >
-            <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            End
-          </button>
-          
-          <button 
-            className="btn btn-ghost col-span-2 sm:col-span-1 h-16 text-lg font-semibold" 
-            onClick={() => setEditOpen(true)} 
-            disabled={onIdle}
-          >
-            <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            Edit Session
-          </button>
+      {/* Enhanced Control Panel (desktop/tablet) moved to sidebar under Session Goals */}
+
+      {/* Mobile Sticky Control Bar */}
+      <div className="md:hidden fixed bottom-20 left-0 right-0 px-4 z-40">
+        <div className="glass-nav rounded-2xl p-3 border border-slate-700/40">
+          <div className="grid grid-cols-4 gap-3">
+            <button 
+              className={`btn ${onIdle ? 'btn-success' : 'btn-secondary'} h-14 text-sm font-semibold`} 
+              onClick={start} 
+              disabled={!onIdle}
+            >
+              Start
+            </button>
+            <button 
+              className="btn btn-secondary h-14 text-sm font-semibold" 
+              onClick={takeBreak} 
+              disabled={!onWork}
+            >
+              Break
+            </button>
+            <button 
+              className="btn btn-secondary h-14 text-sm font-semibold" 
+              onClick={back} 
+              disabled={!onBreak}
+            >
+              Back
+            </button>
+            <button 
+              className="btn btn-danger h-14 text-sm font-semibold" 
+              onClick={end} 
+              disabled={onIdle}
+            >
+              End
+            </button>
+          </div>
+          <div className="mt-3">
+            <button 
+              className="btn btn-ghost w-full h-12 text-sm font-semibold" 
+              onClick={() => setEditOpen(true)} 
+              disabled={onIdle}
+            >
+              Edit Session
+            </button>
+          </div>
         </div>
       </div>
 
+      {/* Mobile Floating FAB */}
+      <button
+        className={`md:hidden fixed bottom-6 right-6 z-50 rounded-full shadow-2xl focus-ring tilt ${onIdle ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'} text-white px-6 h-14`}
+        onClick={() => (onIdle ? start() : end())}
+      >
+        {onIdle ? 'Start' : 'End'}
+      </button>
+
       {/* Enhanced Break Tracking & Shift Guidance */}
       {breaks.length > 0 && (
-        <div className="card space-y-6">
-          <div className="flex items-center space-x-3 pb-3 border-b border-slate-700/50">
-            <div className="w-8 h-8 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="card space-y-6 tilt">
+          <SectionHeader
+            title="Break Management"
+            icon={(
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-slate-200">Break Management</h3>
-          </div>
+            )}
+          />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {breaks.map((break_, index) => (
               <div key={index} className="p-6 bg-slate-800/50 rounded-2xl border border-slate-700/50 hover:bg-slate-800/70 transition-colors duration-300">
@@ -390,15 +420,15 @@ export default function Stopwatch({ snap, setSnap }: Props) {
 
       {/* Enhanced Progress Tracking */}
       {startTimeMs && (
-        <div className="card space-y-6">
-          <div className="flex items-center space-x-3 pb-3 border-b border-slate-700/50">
-            <div className="w-8 h-8 bg-gradient-to-r from-emerald-600 to-green-600 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        <div className="card space-y-6 tilt">
+          <SectionHeader
+            title="Progress Tracking"
+            icon={(
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2m0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-slate-200">Progress Tracking</h3>
-          </div>
+            )}
+          />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="p-6 bg-slate-800/50 rounded-2xl border border-slate-700/50 hover:bg-slate-800/70 transition-colors duration-300">
               <div className="text-sm text-slate-400 mb-2">Current Progress</div>
