@@ -13,6 +13,8 @@ export default function ManualForm({ snap, setSnap }: Props) {
   const [breaks, setBreaks] = useState<{ start: string; end: string }[]>([]);
   const [note, setNote] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [selectedTaskId, setSelectedTaskId] = useState<string>('');
 
   function addBreak() { setBreaks([...breaks, { start: '', end: '' }]); }
   function removeBreak(i: number) { const a = [...breaks]; a.splice(i, 1); setBreaks(a); }
@@ -38,10 +40,13 @@ export default function ManualForm({ snap, setSnap }: Props) {
       netMs,
       note,
       tags,
+      projectId: selectedProjectId || undefined,
+      taskId: selectedTaskId || undefined,
     };
 
     setSnap({ ...snap, history: [rec, ...snap.history] });
     setStart(''); setEnd(''); setBreaks([]); setNote(''); setTags([]);
+    setSelectedProjectId(''); setSelectedTaskId('');
   }
 
   // Preview
@@ -186,6 +191,53 @@ export default function ManualForm({ snap, setSnap }: Props) {
           </div>
         ))}
       </div>
+
+      {/* Project/Task Assignment */}
+      {(snap.projects?.length || 0) > 0 && (
+        <div className="card space-y-6">
+          <SectionHeader
+            title="Project & Task"
+            subtitle="Assign this shift to a project or task"
+            icon={(
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+            )}
+          />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="form-label">Project (optional)</label>
+              <select
+                className="input"
+                value={selectedProjectId}
+                onChange={(e) => {
+                  setSelectedProjectId(e.target.value);
+                  setSelectedTaskId(''); // Reset task when project changes
+                }}
+              >
+                <option value="">No project</option>
+                {snap.projects?.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="form-label">Task (optional)</label>
+              <select
+                className="input"
+                value={selectedTaskId}
+                onChange={(e) => setSelectedTaskId(e.target.value)}
+                disabled={!selectedProjectId}
+              >
+                <option value="">No task</option>
+                {snap.tasks?.filter(t => t.projectId === selectedProjectId).map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Enhanced Annotations */}
       <div className="card space-y-6">

@@ -4,6 +4,8 @@ import { downloadSummaryCSV, downloadCompatibleCSV } from '../lib/csv';
 import { shiftSummary, hoursToText } from '../lib/timeUtils';
 import EditShiftModal from './EditShiftModal';
 import SectionHeader from './SectionHeader';
+import AnalyticsCharts from './AnalyticsCharts';
+import AdvancedReports from './AdvancedReports';
 import type { HistoryRec, Snapshot } from '../lib/types';
 
 type Props = { 
@@ -16,49 +18,152 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
   const [sortBy, setSortBy] = useState<'date' | 'duration' | 'breaks' | 'overtime'>('date');
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<{ kind: 'history', id: string, record: HistoryRec } | null>(null);
+  
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ 
+    start: '', 
+    end: '' 
+  });
+  const [quickFilter, setQuickFilter] = useState<'all' | 'today' | 'week' | 'month' | 'year'>('all');
 
-  // Calculate statistics
-  const totalShifts = snap.history.length;
-  const totalNetHours = snap.history.reduce((a, r) => a + r.netMs, 0) / 3600000;
-  const averageShiftLength = totalShifts > 0 ? totalNetHours / totalShifts : 0;
-  
-  // Calculate overtime (hours beyond 7 hours per session, based on net working hours)
-  const targetDailyHours = 7; // 7 hours net work daily
-  const totalOvertimeHours = snap.history.reduce((a, r) => {
-    const shiftNetHours = r.netMs / 3600000;
-    const overtime = Math.max(0, shiftNetHours - targetDailyHours);
-    return a + overtime;
-  }, 0);
-  
-  // Calculate earnings (only on net working hours + overtime)
-  const hourlyRate = snap.prefs.hourlyRate || 0;
-  const totalEarnings = hourlyRate > 0 ? totalNetHours * hourlyRate : 0;
-  const averageEarningsPerShift = totalShifts > 0 ? totalEarnings / totalShifts : 0;
-  
-  // Calculate overtime earnings (same rate as normal hours)
-  const totalOvertimeEarnings = hourlyRate > 0 ? totalOvertimeHours * hourlyRate : 0;
+  // Calculate statistics based on filtered shifts (will be recalculated after filtering)
+  const calculateStats = (shifts: HistoryRec[]) => {
+    const totalShifts = shifts.length;
+    const totalNetHours = shifts.reduce((a, r) => a + r.netMs, 0) / 3600000;
+    const averageShiftLength = totalShifts > 0 ? totalNetHours / totalShifts : 0;
+    
+    const overtimeThreshold = snap.prefs.overtimeThreshold || 7;
+    const totalOvertimeHours = shifts.reduce((a, r) => {
+      const shiftNetHours = r.netMs / 3600000;
+      const overtime = Math.max(0, shiftNetHours - overtimeThreshold);
+      return a + overtime;
+    }, 0);
+    
+    const hourlyRate = snap.prefs.hourlyRate || 0;
+    const overtimeRate = snap.prefs.overtimeRate || hourlyRate;
+    
+    // Calculate earnings with separate overtime rate
+    let totalEarnings = 0;
+    if (hourlyRate > 0) {
+      shifts.forEach(shift => {
+        const shiftHours = shift.netMs / 3600000;
+        const regularHours = Math.min(shiftHours, overtimeThreshold);
+        const otHours = Math.max(0, shiftHours - overtimeThreshold);
+        totalEarnings += (regularHours * hourlyRate) + (otHours * overtimeRate);
+      });
+    }
+    
+    const averageEarningsPerShift = totalShifts > 0 ? totalEarnings / totalShifts : 0;
+    const totalOvertimeEarnings = totalOvertimeHours * overtimeRate;
+    
+    return {
+      totalShifts,
+      totalNetHours,
+      averageShiftLength,
+      totalOvertimeHours,
+      totalEarnings,
+      averageEarningsPerShift,
+      totalOvertimeEarnings,
+    };
+  };
+
+  // Calculate stats for all shifts (original) and filtered shifts
+  const allStats = calculateStats(snap.history);
+  const filteredStats = calculateStats(filteredShifts);
   
   // Helper function to round to 2 decimal places
   const roundToTwo = (num: number) => Math.round(num * 100) / 100;
+  
+  const hourlyRate = snap.prefs.hourlyRate || 0;
+  const overtimeThreshold = snap.prefs.overtimeThreshold || 7;
+
+  // Get all unique tags
+  const allTags = Array.from(
+    new Set(snap.history.flatMap(shift => shift.tags || []))
+  ).sort();
+
+  // Apply quick date filter
+  const getQuickFilterDates = (filter: string) => {
+    const now = Date.now();
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    
+    switch (filter) {
+      case 'today':
+        return { start: today.getTime(), end: now };
+      case 'week':
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay());
+        return { start: weekStart.getTime(), end: now };
+      case 'month':
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        return { start: monthStart.getTime(), end: now };
+      case 'year':
+        const yearStart = new Date(today.getFullYear(), 0, 1);
+        return { start: yearStart.getTime(), end: now };
+      default:
+        return null;
+    }
+  };
 
   // Filter and sort shifts
-  const filteredShifts = snap.history
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'date':
-          return b.startMs - a.startMs;
-        case 'duration':
-          return b.netMs - a.netMs;
-        case 'breaks':
-          return b.breakMs - a.breakMs;
-        case 'overtime':
-          const aOvertime = Math.max(0, (a.netMs / 3600000) - 7);
-          const bOvertime = Math.max(0, (b.netMs / 3600000) - 7);
-          return bOvertime - aOvertime;
-        default:
-          return 0;
+  let filteredShifts = snap.history.filter(shift => {
+    // Quick date filter
+    if (quickFilter !== 'all') {
+      const quickDates = getQuickFilterDates(quickFilter);
+      if (quickDates) {
+        if (shift.startMs < quickDates.start || shift.startMs > quickDates.end) {
+          return false;
+        }
       }
-    });
+    }
+
+    // Custom date range filter
+    if (dateRange.start) {
+      const startMs = new Date(dateRange.start).getTime();
+      if (shift.startMs < startMs) return false;
+    }
+    if (dateRange.end) {
+      const endMs = new Date(dateRange.end).getTime() + 86400000; // Add a day to include the end date
+      if (shift.startMs > endMs) return false;
+    }
+
+    // Search filter (notes and tags)
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const inNotes = shift.note?.toLowerCase().includes(query) || false;
+      const inTags = (shift.tags || []).some(tag => tag.toLowerCase().includes(query));
+      if (!inNotes && !inTags) return false;
+    }
+
+    // Tag filter
+    if (selectedTags.length > 0) {
+      const shiftTags = shift.tags || [];
+      if (!selectedTags.some(tag => shiftTags.includes(tag))) return false;
+    }
+
+    return true;
+  });
+
+  // Sort filtered shifts
+  filteredShifts = filteredShifts.sort((a, b) => {
+    switch (sortBy) {
+      case 'date':
+        return b.startMs - a.startMs;
+      case 'duration':
+        return b.netMs - a.netMs;
+      case 'breaks':
+        return b.breakMs - a.breakMs;
+      case 'overtime':
+        const aOvertime = Math.max(0, (a.netMs / 3600000) - 7);
+        const bOvertime = Math.max(0, (b.netMs / 3600000) - 7);
+        return bOvertime - aOvertime;
+      default:
+        return 0;
+    }
+  });
 
   function openEditModal(shift: HistoryRec) {
     setEditTarget({ kind: 'history', id: shift.id, record: shift });
@@ -326,7 +431,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
               </svg>
             </div>
             <div className="space-y-2">
-              <div className="text-3xl font-bold text-slate-200">{totalShifts}</div>
+              <div className="text-3xl font-bold text-slate-200">{filteredStats.totalShifts}</div>
               <div className="text-sm text-slate-400">Total Shifts</div>
             </div>
           </div>
@@ -338,7 +443,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
               </svg>
             </div>
             <div className="space-y-2">
-              <div className="text-3xl font-bold text-slate-200">{hoursToText(totalNetHours)}</div>
+              <div className="text-3xl font-bold text-slate-200">{hoursToText(filteredStats.totalNetHours)}</div>
               <div className="text-sm text-slate-400">Total Hours</div>
             </div>
           </div>
@@ -350,7 +455,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
               </svg>
             </div>
             <div className="space-y-2">
-              <div className="text-3xl font-bold text-slate-200">{hoursToText(averageShiftLength)}</div>
+              <div className="text-3xl font-bold text-slate-200">{hoursToText(filteredStats.averageShiftLength)}</div>
               <div className="text-sm text-slate-400">Avg. Shift</div>
             </div>
           </div>
@@ -375,11 +480,11 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
               </svg>
             </div>
             <div className="space-y-2">
-              <div className="text-3xl font-bold text-slate-200">{hoursToText(totalOvertimeHours)}</div>
+              <div className="text-3xl font-bold text-slate-200">{hoursToText(filteredStats.totalOvertimeHours)}</div>
               <div className="text-sm text-slate-400">Overtime Hours</div>
               {hourlyRate > 0 && (
                 <div className="text-xs text-slate-500 bg-slate-800/50 px-2 py-1 rounded-full">
-                  +{roundToTwo(totalOvertimeEarnings).toFixed(2)} {snap.prefs.currency || 'EGP'}
+                  +{roundToTwo(filteredStats.totalOvertimeEarnings).toFixed(2)} {snap.prefs.currency || 'EGP'}
                 </div>
               )}
             </div>
@@ -395,17 +500,28 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
               </div>
               <div className="space-y-2">
                 <div className="text-3xl font-bold text-emerald-400">
-                  {roundToTwo(totalEarnings).toFixed(2)} {snap.prefs.currency || 'EGP'}
+                  {roundToTwo(filteredStats.totalEarnings).toFixed(2)} {snap.prefs.currency || 'EGP'}
                 </div>
                 <div className="text-sm text-slate-400">Total Earnings</div>
                 <div className="text-xs text-slate-500 bg-slate-800/50 px-2 py-1 rounded-full">
-                  Avg: {roundToTwo(averageEarningsPerShift).toFixed(2)} {snap.prefs.currency || 'EGP'}/shift
+                  Avg: {roundToTwo(filteredStats.averageEarningsPerShift).toFixed(2)} {snap.prefs.currency || 'EGP'}/shift
                 </div>
               </div>
             </div>
           )}
         </div>
+        {(searchQuery || selectedTags.length > 0 || quickFilter !== 'all' || dateRange.start || dateRange.end) && (
+          <div className="text-center text-sm text-slate-400">
+            Showing {filteredShifts.length} of {allStats.totalShifts} shifts
+          </div>
+        )}
       </div>
+
+      {/* Analytics Section */}
+      <AnalyticsCharts shifts={filteredShifts} hourlyRate={hourlyRate} />
+      
+      {/* Advanced Reports Section */}
+      <AdvancedReports snap={snap} />
 
       {/* Enhanced Filters and Actions */}
       <div className="card space-y-8">
@@ -422,15 +538,141 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
 
         {/* Reorganized Controls Section */}
         <div className="space-y-6">
+          {/* Search and Filters Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Search */}
+            <div className="space-y-2">
+              <label className="form-label flex items-center space-x-2">
+                <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span>Search</span>
+              </label>
+              <input
+                type="text"
+                className="input w-full"
+                placeholder="Search by notes or tags..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            {/* Quick Date Filter */}
+            <div className="space-y-2">
+              <label className="form-label flex items-center space-x-2">
+                <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>Quick Filter</span>
+              </label>
+              <select
+                className="input w-full"
+                value={quickFilter}
+                onChange={(e) => {
+                  setQuickFilter(e.target.value as any);
+                  setDateRange({ start: '', end: '' }); // Clear custom range when using quick filter
+                }}
+              >
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+                <option value="year">This Year</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Date Range and Tags */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Custom Date Range */}
+            <div className="space-y-2">
+              <label className="form-label flex items-center space-x-2">
+                <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>Custom Date Range</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="date"
+                  className="input"
+                  value={dateRange.start}
+                  onChange={(e) => {
+                    setDateRange({ ...dateRange, start: e.target.value });
+                    setQuickFilter('all'); // Clear quick filter when using custom range
+                  }}
+                />
+                <input
+                  type="date"
+                  className="input"
+                  value={dateRange.end}
+                  onChange={(e) => {
+                    setDateRange({ ...dateRange, end: e.target.value });
+                    setQuickFilter('all'); // Clear quick filter when using custom range
+                  }}
+                />
+              </div>
+              {(dateRange.start || dateRange.end) && (
+                <button
+                  className="btn btn-ghost btn-sm w-full text-xs"
+                  onClick={() => setDateRange({ start: '', end: '' })}
+                >
+                  Clear Date Range
+                </button>
+              )}
+            </div>
+
+            {/* Tag Filter */}
+            {allTags.length > 0 && (
+              <div className="space-y-2">
+                <label className="form-label flex items-center space-x-2">
+                  <svg className="w-4 h-4 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                  <span>Filter by Tags</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {allTags.map(tag => (
+                    <button
+                      key={tag}
+                      onClick={() => {
+                        if (selectedTags.includes(tag)) {
+                          setSelectedTags(selectedTags.filter(t => t !== tag));
+                        } else {
+                          setSelectedTags([...selectedTags, tag]);
+                        }
+                      }}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                        selectedTags.includes(tag)
+                          ? 'bg-violet-500 text-white border border-violet-400'
+                          : 'bg-slate-700 text-slate-300 border border-slate-600 hover:bg-slate-600'
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+                {selectedTags.length > 0 && (
+                  <button
+                    className="btn btn-ghost btn-sm w-full text-xs"
+                    onClick={() => setSelectedTags([])}
+                  >
+                    Clear Tags
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Primary Controls Row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Sort Controls */}
             <div className="space-y-3">
               <label className="form-label flex items-center space-x-2">
                 <svg className="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
                 </svg>
-                <span>Sort & Filter</span>
+                <span>Sort By</span>
               </label>
               <select
                 className="input w-full"
@@ -455,22 +697,40 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
               <button
                 className="btn btn-success w-full"
                 onClick={() => downloadSummaryCSV(filteredShifts, snap.prefs)}
+                disabled={filteredShifts.length === 0}
+                title={filteredShifts.length === 0 ? 'No shifts to export' : `Export ${filteredShifts.length} shifts`}
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
-                Export All Shifts
+                Export CSV ({filteredShifts.length})
               </button>
               
               <button
                 className="btn btn-info w-full mt-3"
                 onClick={() => downloadCompatibleCSV(filteredShifts, snap.prefs)}
+                disabled={filteredShifts.length === 0}
                 title="Export data in compatible format for importing on other devices"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 01-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2zm0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
                 Export Compatible
+              </button>
+
+              <button
+                className="btn btn-primary w-full mt-3"
+                onClick={() => {
+                  // PDF export will be implemented with jsPDF
+                  alert('PDF export feature coming soon! For now, please use CSV export.');
+                }}
+                disabled={filteredShifts.length === 0}
+                title="Export as PDF report"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                Export PDF
               </button>
             </div>
 
@@ -559,7 +819,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
-                  <span className="text-sm">Showing <span className="font-semibold text-slate-200">{filteredShifts.length}</span> of <span className="font-semibold text-slate-200">{totalShifts}</span> shifts</span>
+                  <span className="text-sm">Showing <span className="font-semibold text-slate-200">{filteredShifts.length}</span> of <span className="font-semibold text-slate-200">{allStats.totalShifts}</span> shifts</span>
                 </div>
               </div>
             </div>
@@ -688,6 +948,16 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
                     <span>Overtime</span>
                   </div>
                 </th>
+                {(snap.projects?.length || 0) > 0 && (
+                  <th className="table-header px-6 py-4">
+                    <div className="flex items-center space-x-2">
+                      <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                      </svg>
+                      <span>Project</span>
+                    </div>
+                  </th>
+                )}
                 <th className="table-header px-6 py-4">
                   <div className="flex items-center space-x-2">
                     <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -700,7 +970,16 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
             </thead>
             <tbody>
               {filteredShifts.map((shift) => {
-                const summary = shiftSummary(shift.startMs, shift.endMs, shift.breaks, snap.prefs.hourFormat);
+                const summary = shiftSummary(
+                  shift.startMs,
+                  shift.endMs,
+                  shift.breaks,
+                  snap.prefs.hourFormat,
+                  snap.prefs.hourlyRate,
+                  snap.prefs.currency,
+                  snap.prefs.overtimeThreshold || 7,
+                  snap.prefs.overtimeRate
+                );
                 const hasOvertime = summary.overtimeHours > 0;
                 const isToday = new Date(shift.startMs).toDateString() === new Date().toDateString();
                 
@@ -769,17 +1048,50 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
                               <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                               </svg>
-                              +{hoursToText(summary.overtimeHours)} beyond {hoursToText(7)} target
+                              +{hoursToText(summary.overtimeHours)} beyond {overtimeThreshold}h
                             </div>
                             {snap.prefs.hourlyRate && snap.prefs.hourlyRate > 0 && (
                               <div className="text-xs text-slate-500">
-                                +{((summary.overtimeHours * snap.prefs.hourlyRate)).toFixed(2)} {snap.prefs.currency || 'EGP'}
+                                +{((summary.overtimeHours * (snap.prefs.overtimeRate || snap.prefs.hourlyRate))).toFixed(2)} {snap.prefs.currency || 'EGP'}
                               </div>
                             )}
                           </div>
                         )}
                       </div>
                     </td>
+                    
+                    {/* Project/Task Column */}
+                    {(snap.projects?.length || 0) > 0 && (
+                      <td className="table-cell px-6 py-4">
+                        {shift.projectId ? (
+                          <div className="flex items-center space-x-2">
+                            {(() => {
+                              const project = snap.projects?.find(p => p.id === shift.projectId);
+                              const task = shift.taskId ? snap.tasks?.find(t => t.id === shift.taskId) : null;
+                              return (
+                                <>
+                                  {project && (
+                                    <div
+                                      className="w-3 h-3 rounded-full flex-shrink-0"
+                                      style={{ backgroundColor: project.color }}
+                                      title={project.name}
+                                    />
+                                  )}
+                                  <div className="min-w-0">
+                                    <div className="text-sm text-slate-200 truncate">{project?.name || 'Unknown'}</div>
+                                    {task && (
+                                      <div className="text-xs text-slate-400 truncate">{task.name}</div>
+                                    )}
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-slate-500">—</span>
+                        )}
+                      </td>
+                    )}
                     
                     {/* Enhanced Actions Column */}
                     <td className="table-cell px-6 py-4">

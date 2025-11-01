@@ -15,6 +15,8 @@ type Props = {
 export default function Stopwatch({ snap, setSnap }: Props) {
   const [editOpen, setEditOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [selectedTaskId, setSelectedTaskId] = useState<string>('');
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);
@@ -98,6 +100,8 @@ export default function Stopwatch({ snap, setSnap }: Props) {
       breaks: updatedBreaks,
       note: '',
       tags: [],
+      projectId: selectedProjectId || undefined,
+      taskId: selectedTaskId || undefined,
     };
 
     setSnap({
@@ -112,6 +116,10 @@ export default function Stopwatch({ snap, setSnap }: Props) {
       history: [newShift, ...snap.history],
       updatedAt: now,
     });
+    
+    // Reset project/task selection
+    setSelectedProjectId('');
+    setSelectedTaskId('');
   }
 
   const t = msToHhMm(netMs);
@@ -278,36 +286,85 @@ export default function Stopwatch({ snap, setSnap }: Props) {
 
           {/* Enhanced Session Info */}
           {startTimeMs && (
-            <div className="card space-y-6 tilt">
-              <SectionHeader
-                title="Session Details"
-                icon={(
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                )}
-              />
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:bg-slate-800/70 transition-colors duration-300">
-                  <span className="text-slate-400">Started</span>
-                  <span className="font-mono text-slate-200">{fmtClock(startTimeMs, fmt)}</span>
-                </div>
-                <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:bg-slate-800/70 transition-colors duration-300">
-                  <span className="text-slate-400">Duration</span>
-                  <span className="font-mono text-slate-200">{t.text}</span>
-                </div>
-                
-                {/* Enhanced Earnings Info */}
-                {hourlyRate > 0 && (
-                  <div className="flex items-center justify-between p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors duration-300">
-                    <span className="text-slate-400">Current Earnings</span>
-                    <span className="font-mono font-bold text-emerald-400">
-                      {roundToTwo(currentEarnings).toFixed(2)} {snap.prefs.currency || 'EGP'}
-                    </span>
+            <>
+              <div className="card space-y-6 tilt">
+                <SectionHeader
+                  title="Session Details"
+                  icon={(
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                />
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:bg-slate-800/70 transition-colors duration-300">
+                    <span className="text-slate-400">Started</span>
+                    <span className="font-mono text-slate-200">{fmtClock(startTimeMs, fmt)}</span>
                   </div>
-                )}
+                  <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:bg-slate-800/70 transition-colors duration-300">
+                    <span className="text-slate-400">Duration</span>
+                    <span className="font-mono text-slate-200">{t.text}</span>
+                  </div>
+                  
+                  {/* Enhanced Earnings Info */}
+                  {hourlyRate > 0 && (
+                    <div className="flex items-center justify-between p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors duration-300">
+                      <span className="text-slate-400">Current Earnings</span>
+                      <span className="font-mono font-bold text-emerald-400">
+                        {roundToTwo(currentEarnings).toFixed(2)} {snap.prefs.currency || 'EGP'}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+
+              {/* Project/Task Assignment */}
+              {(snap.projects?.length || 0) > 0 && (
+                <div className="card space-y-4">
+                  <SectionHeader
+                    title="Assign to Project"
+                    subtitle="Optional: Link this shift to a project or task"
+                    icon={(
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                      </svg>
+                    )}
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="form-label">Project</label>
+                      <select
+                        className="input"
+                        value={selectedProjectId}
+                        onChange={(e) => {
+                          setSelectedProjectId(e.target.value);
+                          setSelectedTaskId(''); // Reset task when project changes
+                        }}
+                      >
+                        <option value="">No project</option>
+                        {snap.projects?.map(p => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="form-label">Task</label>
+                      <select
+                        className="input"
+                        value={selectedTaskId}
+                        onChange={(e) => setSelectedTaskId(e.target.value)}
+                        disabled={!selectedProjectId}
+                      >
+                        <option value="">No task</option>
+                        {snap.tasks?.filter(t => t.projectId === selectedProjectId).map(t => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

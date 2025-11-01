@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import '../styles/globals.css';
 import FirebaseErrorHandler from '@/components/FirebaseErrorHandler';
+import { AuthProvider } from '@/lib/auth';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -76,10 +77,14 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body className={`${inter.className} antialiased`}>
         <FirebaseErrorHandler>
-          <div id="root" className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 pb-[env(safe-area-inset-bottom)] aurora-bg">
+          <AuthProvider>
+            <div id="root" className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 pb-[env(safe-area-inset-bottom)] aurora-bg">
             {/* Subtle Background Elements (performance-friendly) */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
               <div className="absolute -top-16 -left-16 w-80 h-80 bg-violet-600/10 rounded-full blur-3xl"></div>
@@ -93,6 +98,7 @@ export default function RootLayout({
               {children}
             </div>
           </div>
+          </AuthProvider>
         </FirebaseErrorHandler>
       </body>
     </html>

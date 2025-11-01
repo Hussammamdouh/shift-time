@@ -130,7 +130,9 @@ export function shiftSummary(
   breaks: { startMs: number; endMs: number | null }[],
   hourFormat: 12 | 24 = 24,
   hourlyRate?: number,
-  currency: string = 'USD'
+  currency: string = 'USD',
+  overtimeThreshold?: number,
+  overtimeRate?: number
 ) {
   const netMs = computeNetMs(shiftStart, shiftEnd, breaks);
   const normalized = normalizeBreaks(breaks, shiftEnd);
@@ -153,12 +155,22 @@ export function shiftSummary(
   const netHours = msToHours(netMs);
   const breakHours = msToHours(breakMs);
   
-  // Calculate overtime (hours beyond 7 hours per day)
-  const targetDailyHours = 7; // 7 hours net work daily (excluding breaks)
+  // Calculate overtime (hours beyond threshold)
+  // Overtime threshold defaults to 7 hours if not provided
+  const targetDailyHours = overtimeThreshold ?? 7;
   const overtimeHours = Math.max(0, netHours - targetDailyHours);
   const overtime = hoursToText(overtimeHours);
   
-  const earnings = hourlyRate ? calculateEarnings(netHours, hourlyRate) : undefined;
+  // Calculate earnings with separate overtime rate if provided
+  const effectiveOvertimeRate = overtimeRate ?? hourlyRate ?? 0;
+  let earnings: number | undefined;
+  if (hourlyRate) {
+    const regularHours = Math.min(netHours, targetDailyHours);
+    const otHours = Math.max(0, netHours - targetDailyHours);
+    const regularEarnings = regularHours * hourlyRate;
+    const otEarnings = otHours * effectiveOvertimeRate;
+    earnings = regularEarnings + otEarnings;
+  }
 
   return {
     start: fmtClock(shiftStart, hourFormat),

@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import type { Snapshot } from '@/lib/types';
 import SectionHeader from './SectionHeader';
 import { setPasscode, disableLock, isLockEnabled } from '@/lib/passcode';
+import { useAuth } from '@/lib/auth';
+import ProjectManager from './ProjectManager';
 
 // Helper function to format currency
 function formatCurrency(amount: number, currency: string = 'USD'): string {
@@ -13,10 +15,19 @@ function formatCurrency(amount: number, currency: string = 'USD'): string {
 }
 
 export default function SettingsPanel({ snap, setSnap }: { snap: Snapshot; setSnap: (s: Snapshot) => void }) {
+  const { changePassword } = useAuth();
   const [newPasscode, setNewPasscode] = useState('');
   const [confirmPasscode, setConfirmPasscode] = useState('');
   const [lockStatus, setLockStatus] = useState(false);
   const [message, setMessage] = useState('');
+  
+  // Password change state
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   useEffect(() => {
     setLockStatus(isLockEnabled());
@@ -220,7 +231,7 @@ export default function SettingsPanel({ snap, setSnap }: { snap: Snapshot; setSn
               <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span>Hourly Rate ({snap.prefs.currency || 'EGP'})</span>
+              <span>Regular Hourly Rate ({snap.prefs.currency || 'EGP'})</span>
             </label>
             <input
               className="input w-full"
@@ -233,6 +244,48 @@ export default function SettingsPanel({ snap, setSnap }: { snap: Snapshot; setSn
             />
             <div className="text-xs text-slate-500 bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
               Auto-calculated from salary or set manually
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            <label className="form-label flex items-center space-x-2">
+              <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span>Overtime Hourly Rate ({snap.prefs.currency || 'EGP'})</span>
+            </label>
+            <input
+              className="input w-full"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Auto (same as regular)"
+              value={snap.prefs.overtimeRate || ''}
+              onChange={(e) => updatePrefs({ overtimeRate: e.target.value ? Number(e.target.value) : undefined })}
+            />
+            <div className="text-xs text-slate-500 bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
+              Overtime rate (leave empty to use regular rate)
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            <label className="form-label flex items-center space-x-2">
+              <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Overtime Threshold (hours)</span>
+            </label>
+            <input
+              className="input w-full"
+              type="number"
+              min="0"
+              max="24"
+              step="0.1"
+              value={(snap.prefs.overtimeThreshold || 7).toFixed(1)}
+              onChange={(e) => updatePrefs({ overtimeThreshold: e.target.value ? Number(e.target.value) : 7 })}
+            />
+            <div className="text-xs text-slate-500 bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
+              Hours after which overtime applies (default: 7 hours)
             </div>
           </div>
           <div className="space-y-3">
@@ -453,6 +506,93 @@ export default function SettingsPanel({ snap, setSnap }: { snap: Snapshot; setSn
         </div>
       </div>
 
+      {/* Password Change Section */}
+      <div className="card space-y-6">
+        <SectionHeader
+          title="Change Password"
+          subtitle="Update your account password"
+          icon={(
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            </svg>
+          )}
+        />
+        
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <label className="form-label">New Password</label>
+            <input
+              type="password"
+              value={passwordForm.newPassword}
+              onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+              className="input w-full"
+              placeholder="Enter new password (min 6 characters)"
+              minLength={6}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="form-label">Confirm New Password</label>
+            <input
+              type="password"
+              value={passwordForm.confirmPassword}
+              onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+              className="input w-full"
+              placeholder="Confirm new password"
+              minLength={6}
+            />
+          </div>
+
+          <button
+            onClick={async () => {
+              if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+                setMessage('Passwords do not match');
+                return;
+              }
+              if (passwordForm.newPassword.length < 6) {
+                setMessage('Password must be at least 6 characters');
+                return;
+              }
+
+              setPasswordLoading(true);
+              setMessage('');
+              
+              try {
+                await changePassword(passwordForm.newPassword);
+                setMessage('Password changed successfully ✓');
+                setPasswordForm({
+                  currentPassword: '',
+                  newPassword: '',
+                  confirmPassword: '',
+                });
+                setTimeout(() => setMessage(''), 3000);
+              } catch (error: any) {
+                setMessage(error.message || 'Failed to change password');
+                setTimeout(() => setMessage(''), 5000);
+              } finally {
+                setPasswordLoading(false);
+              }
+            }}
+            disabled={passwordLoading || !passwordForm.newPassword || !passwordForm.confirmPassword}
+            className="btn btn-primary w-full disabled:opacity-50"
+          >
+            {passwordLoading ? (
+              <div className="flex items-center justify-center space-x-2">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Changing password...</span>
+              </div>
+            ) : (
+              <>
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+                Change Password
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
       {/* Enhanced Security Settings */}
       <div className="card space-y-6">
         <SectionHeader
@@ -597,6 +737,20 @@ export default function SettingsPanel({ snap, setSnap }: { snap: Snapshot; setSn
             Clear All Data
           </button>
         </div>
+      </div>
+
+      {/* Project & Task Management */}
+      <div className="card space-y-6">
+        <SectionHeader
+          title="Projects & Tasks"
+          subtitle="Organize your time by projects and tasks"
+          icon={(
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+          )}
+        />
+        <ProjectManager snap={snap} setSnap={setSnap} />
       </div>
 
       {/* Enhanced Message Display */}

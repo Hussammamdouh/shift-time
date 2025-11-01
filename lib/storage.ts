@@ -1,7 +1,12 @@
 import type { Snapshot } from './types';
 
-const KEY = 'shift-tracker:snapshot';
 const CURRENT_SCHEMA = 1;
+
+// Get storage key for a specific user
+function getStorageKey(userId?: string): string {
+  if (!userId) return 'shift-tracker:snapshot:anonymous';
+  return `shift-tracker:snapshot:${userId}`;
+}
 
 export const defaultSnapshot = (): Snapshot => ({
   schemaVersion: CURRENT_SCHEMA,
@@ -13,9 +18,10 @@ export const defaultSnapshot = (): Snapshot => ({
   prefs: { hourFormat: 24, theme: 'dark', targetMinutes: 420, autoSync: false, syncCode: '' },
 });
 
-export function loadLocal(): Snapshot {
+export function loadLocal(userId?: string): Snapshot {
   try {
-    const raw = localStorage.getItem(KEY);
+    const key = getStorageKey(userId);
+    const raw = localStorage.getItem(key);
     if (!raw) return defaultSnapshot();
     const parsed = JSON.parse(raw) as Snapshot;
     return migrate(parsed);
@@ -24,19 +30,20 @@ export function loadLocal(): Snapshot {
   }
 }
 
-export function saveLocal(snap: Snapshot) {
+export function saveLocal(snap: Snapshot, userId?: string) {
   try {
+    const key = getStorageKey(userId);
     const next = { ...snap, updatedAt: Date.now(), schemaVersion: CURRENT_SCHEMA };
-    localStorage.setItem(KEY, JSON.stringify(next));
+    localStorage.setItem(key, JSON.stringify(next));
   } catch {}
 }
 
-export function setSnapshot(next: Snapshot) { saveLocal(next); }
+export function setSnapshot(next: Snapshot, userId?: string) { saveLocal(next, userId); }
 
-export function updateSnapshot(updater: (cur: Snapshot) => Snapshot): Snapshot {
-  const cur = loadLocal();
+export function updateSnapshot(updater: (cur: Snapshot) => Snapshot, userId?: string): Snapshot {
+  const cur = loadLocal(userId);
   const next = updater(cur);
-  saveLocal(next);
+  saveLocal(next, userId);
   return next;
 }
 

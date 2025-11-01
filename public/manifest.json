@@ -1,17 +1,41 @@
 {
-  "name": "Shift Tracker - Professional Time Management",
-  "short_name": "Shift Tracker",
-  "description": "Advanced time tracking and shift management system",
+  "name": "Shift Manager - Time Tracking",
+  "short_name": "Shift Manager",
+  "description": "Professional time tracking and shift management application",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f0f23",
-  "theme_color": "#0f0f23",
+  "background_color": "#0f172a",
+  "theme_color": "#8b5cf6",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "16x16",
-      "type": "image/x-icon"
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "business"],
+  "shortcuts": [
+    {
+      "name": "Start Shift",
+      "short_name": "Start",
+      "description": "Quick start a new shift",
+      "url": "/?tab=watch",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Reports",
+      "short_name": "Reports",
+      "description": "View shift reports",
+      "url": "/?tab=report",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

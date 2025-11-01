@@ -1,63 +1,38 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { Snapshot } from '@/lib/types';
-import { subscribeRoom, pushSnapshot } from '@/lib/sync';
 import { db } from '@/lib/firebase';
+import { useAuth } from '@/lib/auth';
 import DevicePanel from './DevicePanel';
 
 export default function SyncPanel({ snap, setSnap }: { snap: Snapshot; setSnap: (s: Snapshot) => void }) {
-  const [code, setCode] = useState('');
-  const [status, setStatus] = useState('—');
-  const [unsub, setUnsub] = useState<null | (() => void)>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
+  const { user, company } = useAuth();
+  const [status, setStatus] = useState('Checking status...');
 
   // Check if Firebase is configured
   const isFirebaseConfigured = db !== null;
 
-  useEffect(() => () => { unsub?.(); }, [unsub]);
-
-  async function startLiveSync() {
+  useEffect(() => {
+    // Update status based on current state
     if (!isFirebaseConfigured) {
       setStatus('Firebase not configured');
-      return;
+    } else if (!user || !company) {
+      setStatus('Not authenticated');
+    } else if (snap.prefs.autoSync) {
+      setStatus('Auto Sync Active ✓');
+    } else {
+      setStatus('Auto Sync Disabled');
     }
-    
-    if (!code.trim()) {
-      setStatus('Please enter a sync passcode');
-      return;
-    }
+  }, [isFirebaseConfigured, user, company, snap.prefs.autoSync]);
 
-    setIsConnecting(true);
-    setStatus('Connecting to LiveSync...');
-    
-    try {
-      // First, push current data to ensure it's available to other devices
-      await pushSnapshot(code, snap);
-      
-      // Then start real-time subscription
-      const unsubscribe = await subscribeRoom(code, (remote) => {
-        if (remote) { 
-          setSnap(remote); 
-          setStatus('LiveSync Active ✓'); 
-        }
-      });
-      
-      setUnsub(() => unsubscribe);
-      setStatus('LiveSync Active ✓');
-    } catch (error) {
-      setStatus('LiveSync failed');
-      console.error('LiveSync error:', error);
-    } finally {
-      setIsConnecting(false);
-    }
-  }
-
-  function stopLiveSync() {
-    if (unsub) {
-      unsub(); 
-      setUnsub(null); 
-      setStatus('LiveSync stopped');
-    }
+  function toggleAutoSync() {
+    setSnap({
+      ...snap,
+      prefs: {
+        ...snap.prefs,
+        autoSync: !snap.prefs.autoSync,
+      },
+    });
   }
 
   return (
@@ -114,76 +89,57 @@ export default function SyncPanel({ snap, setSnap }: { snap: Snapshot; setSnap: 
             </svg>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-slate-200">LiveSync Configuration</h3>
-            <p className="text-sm text-slate-400">Enter your sync passcode to start real-time synchronization</p>
+            <h3 className="text-lg font-semibold text-slate-200">Auto Sync Configuration</h3>
+            <p className="text-sm text-slate-400">Automatically sync your data across all devices</p>
           </div>
         </div>
 
         <div className="space-y-6">
-          <div className="space-y-3">
-            <label className="form-label flex items-center space-x-2">
-              <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-              </svg>
-              <span>Sync Passcode</span>
-            </label>
-            <input 
-              className="input w-full text-lg" 
-              placeholder="Enter your 4-digit sync code (e.g. 4937)" 
-              value={code} 
-              onChange={(e) => setCode(e.target.value)}
-              disabled={!isFirebaseConfigured}
-              maxLength={8}
-            />
-            <div className="text-xs text-slate-500 bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
-              <div className="font-medium mb-1">🔐 Security Note:</div>
-              <p>Your passcode is hashed client-side using SHA-256 before being sent to Firebase. 
-              The actual passcode is never stored or transmitted in plain text.</p>
+          {/* Auto Sync Toggle */}
+          <div className="flex items-center justify-between p-6 bg-slate-800/50 rounded-xl border border-slate-700/50">
+            <div className="flex items-center space-x-4">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                snap.prefs.autoSync
+                  ? 'bg-emerald-500/20 border-2 border-emerald-500/30'
+                  : 'bg-slate-700/50 border-2 border-slate-600/50'
+              }`}>
+                <svg className={`w-6 h-6 ${snap.prefs.autoSync ? 'text-emerald-400' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="text-lg font-semibold text-slate-200">Auto Sync</h4>
+                <p className="text-sm text-slate-400">
+                  {snap.prefs.autoSync 
+                    ? 'Your data automatically syncs to the cloud and across devices' 
+                    : 'Enable to automatically sync your data across all devices'}
+                </p>
+              </div>
             </div>
+            <button
+              onClick={toggleAutoSync}
+              disabled={!isFirebaseConfigured || !user || !company}
+              className={`relative inline-flex h-7 w-14 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 ${
+                snap.prefs.autoSync ? 'bg-emerald-500' : 'bg-slate-600'
+              } ${(!isFirebaseConfigured || !user || !company) ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                  snap.prefs.autoSync ? 'translate-x-7' : 'translate-x-0'
+                }`}
+              />
+            </button>
           </div>
 
-          {/* LiveSync Button */}
-          <div className="flex justify-center">
-            {!unsub ? (
-              <button 
-                className={`btn ${!isFirebaseConfigured || !code.trim() || isConnecting ? 'btn-secondary' : 'btn-primary'} h-16 px-12`}
-                onClick={startLiveSync}
-                disabled={!isFirebaseConfigured || !code.trim() || isConnecting}
-                title={!isFirebaseConfigured || !code.trim() ? 'Configure Firebase and enter passcode first' : 'Start real-time synchronization'}
-              >
-                <div className="flex flex-col items-center space-y-1">
-                  {isConnecting ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span className="text-sm font-medium">Connecting...</span>
-                      <span className="text-xs opacity-80">Setting up LiveSync</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                      <span className="text-sm font-medium">Start LiveSync</span>
-                      <span className="text-xs opacity-80">Real-time sync across devices</span>
-                    </>
-                  )}
-                </div>
-              </button>
-            ) : (
-              <button 
-                className="btn btn-danger h-16 px-12"
-                onClick={stopLiveSync}
-                title="Stop LiveSync"
-              >
-                <div className="flex flex-col items-center space-y-1">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  <span className="text-sm font-medium">Stop LiveSync</span>
-                  <span className="text-xs opacity-80">Disconnect real-time sync</span>
-                </div>
-              </button>
-            )}
+          {/* Info Box */}
+          <div className="text-xs text-slate-400 bg-slate-800/50 p-4 rounded-lg border border-slate-700/50">
+            <div className="font-medium mb-1 text-slate-300">ℹ️ How Auto Sync Works:</div>
+            <ul className="space-y-1 list-disc list-inside">
+              <li>Your data is securely stored in Firebase Firestore</li>
+              <li>Real-time synchronization across all your devices</li>
+              <li>Data is automatically saved and synced when changes occur</li>
+              <li>Only your account has access to your data</li>
+            </ul>
           </div>
         </div>
       </div>
@@ -222,25 +178,25 @@ export default function SyncPanel({ snap, setSnap }: { snap: Snapshot; setSnap: 
           <div className="text-xs text-slate-500 bg-slate-800/50 p-4 rounded-lg border border-slate-700/50 space-y-2">
             <div className="font-medium text-slate-400 mb-2">🔧 Technical Details:</div>
             <div className="space-y-1">
-              <div>• <strong>Firestore ID:</strong> SHA-256(passcode) - 64-character hex string</div>
-              <div>• <strong>Security:</strong> Firebase rules lock access to valid 64-hex IDs only</div>
+              <div>• <strong>Storage Path:</strong> companies/{company?.id}/users/{user?.uid}/data</div>
+              <div>• <strong>Security:</strong> Firebase rules ensure only authenticated users can access their data</div>
               <div>• <strong>Encryption:</strong> All data is encrypted in transit using HTTPS</div>
-              <div>• <strong>Real-time:</strong> LiveSync uses Firestore real-time listeners</div>
+              <div>• <strong>Real-time:</strong> Auto Sync uses Firestore real-time listeners</div>
               <div>• <strong>Cross-device:</strong> Changes sync instantly across all connected devices</div>
             </div>
           </div>
 
           {/* Connection Info */}
-          {unsub && (
-            <div className="text-center p-4 bg-blue-500/20 rounded-lg border border-blue-500/30">
-              <div className="flex items-center justify-center space-x-2 text-blue-400">
+          {snap.prefs.autoSync && user && company && (
+            <div className="text-center p-4 bg-emerald-500/20 rounded-lg border border-emerald-500/30">
+              <div className="flex items-center justify-center space-x-2 text-emerald-400">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <span className="text-sm font-medium">LiveSync Active</span>
+                <span className="text-sm font-medium">Auto Sync Active</span>
               </div>
-              <p className="text-xs text-blue-300 mt-1">
-                Your data will automatically sync in real-time across all devices using this passcode
+              <p className="text-xs text-emerald-300 mt-1">
+                Your data is automatically syncing in real-time across all your devices
               </p>
             </div>
           )}

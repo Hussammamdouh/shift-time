@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState, Suspense, useRef, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import type { Snapshot } from '@/lib/types';
 import { loadLocal, saveLocal } from '@/lib/storage';
+import { useAuth } from '@/lib/auth';
 import Stopwatch from './Stopwatch';
 import ManualForm from './ManualForm';
 import ReportTable from './ReportTable';
@@ -12,7 +13,7 @@ import Navbar from './Navbar';
 import SettingsPanel from './SettingsPanel';
 import { PageLoader } from './LoadingSpinner';
 import { createDeviceInfo } from '@/lib/deviceUtils';
-import { subscribeRoom, pushSnapshot } from '@/lib/sync';
+import { subscribeRoom, pushSnapshot, pullSnapshot } from '@/lib/sync';
 
 const emptySnapshot: Snapshot = {
   schemaVersion: 1,
@@ -29,15 +30,17 @@ const emptySnapshot: Snapshot = {
     currency: 'EGP',
     autoSync: true, 
     syncCode: '' 
-  },
+  }, // syncCode kept for backward compatibility but not used
   devices: [],
   currentDeviceId: undefined,
 };
 
 function HomeContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { user, userProfile, company, signOut } = useAuth();
   const [snap, setSnap] = useState<Snapshot>(() => {
-    try { return loadLocal(); } catch { return emptySnapshot; }
+    try { return loadLocal(user?.uid); } catch { return emptySnapshot; }
   });
   
   const initialTab = searchParams.get('tab') as 'watch' | 'manual' | 'report' | 'sync' | 'settings' || 'watch';
@@ -46,7 +49,6 @@ function HomeContent() {
   
   // Use ref to track sync state and prevent infinite loops
   const syncStateRef = useRef({
-    lastSyncCode: '',
     lastAutoSync: false,
     isInitialized: false
   });
@@ -58,7 +60,46 @@ function HomeContent() {
     }
   }, [searchParams]);
 
-  useEffect(() => { saveLocal(snap); }, [snap]);
+  // Load data from Firestore when user first logs in - always pull latest from database
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (user?.uid && company?.id) {
+        try {
+          const cloudData = await pullSnapshot(company.id, user.uid);
+          if (cloudData) {
+            // Use cloud data if it's newer than local, otherwise merge
+            if (cloudData.updatedAt > snap.updatedAt || !snap.history.length) {
+              setSnap(prevSnap => ({
+                ...cloudData,
+                currentDeviceId: prevSnap.currentDeviceId, // Preserve current device ID
+                devices: [
+                  ...(cloudData.devices || []).filter(d => d.id !== prevSnap.currentDeviceId),
+                  ...(prevSnap.devices || []).filter(d => d.id === prevSnap.currentDeviceId)
+                ]
+              }));
+              saveLocal(cloudData, user.uid);
+            } else {
+              // Local is newer, push to cloud
+              await pushSnapshot(company.id, user.uid, snap);
+            }
+          } else {
+            // No cloud data exists, push local to cloud
+            await pushSnapshot(company.id, user.uid, snap);
+          }
+        } catch (error) {
+          console.error('Failed to load user data from Firestore:', error);
+        }
+      }
+    };
+    
+    loadUserData();
+  }, [user?.uid, company?.id]); // Only run once when user/company is available
+
+  useEffect(() => { 
+    if (user?.uid) {
+      saveLocal(snap, user.uid); 
+    }
+  }, [snap, user?.uid]);
 
   // Initialize device information when app starts
   useEffect(() => {
@@ -100,10 +141,11 @@ function HomeContent() {
 
   // Memoize the sync function to prevent infinite loops
   const startLiveSync = useCallback(async () => {
-    const currentSyncCode = snap.prefs.syncCode?.trim();
     const currentAutoSync = snap.prefs.autoSync;
+    const companyId = company?.id;
+    const userId = user?.uid;
     
-    if (!currentSyncCode || !currentAutoSync) {
+    if (!currentAutoSync || !companyId || !userId) {
       // Clean up existing sync if disabled
       if (liveSyncUnsub) {
         liveSyncUnsub();
@@ -114,10 +156,10 @@ function HomeContent() {
 
     try {
       // First, push current data to ensure it's available to other devices
-      await pushSnapshot(currentSyncCode, snap);
+      await pushSnapshot(companyId, userId, snap);
       
       // Then start real-time subscription
-      const unsubscribe = await subscribeRoom(currentSyncCode, (remote) => {
+      const unsubscribe = await subscribeRoom(companyId, userId, (remote) => {
         if (remote && remote.updatedAt > snap.updatedAt) {
           // Only update if remote data is newer
           setSnap(prevSnap => ({
@@ -135,26 +177,26 @@ function HomeContent() {
     } catch (error) {
       console.error('Auto LiveSync failed:', error);
     }
-  }, [snap.prefs.syncCode, snap.prefs.autoSync, snap, liveSyncUnsub]);
+  }, [snap.prefs.autoSync, snap, liveSyncUnsub, company?.id, user?.uid]);
 
-  // Auto-start LiveSync when sync code is configured
+  // Auto-start LiveSync when autoSync is enabled and user is authenticated
   useEffect(() => {
-    const currentSyncCode = snap.prefs.syncCode?.trim();
     const currentAutoSync = snap.prefs.autoSync;
     
-    // Only run if sync settings actually changed
-    if (syncStateRef.current.lastSyncCode === currentSyncCode && 
-        syncStateRef.current.lastAutoSync === currentAutoSync &&
-        syncStateRef.current.isInitialized) {
+    // Only run if sync settings actually changed or user/company changed
+    if (syncStateRef.current.lastAutoSync === currentAutoSync &&
+        syncStateRef.current.isInitialized &&
+        company?.id && user?.uid) {
       return;
     }
     
     // Update ref
-    syncStateRef.current.lastSyncCode = currentSyncCode || '';
     syncStateRef.current.lastAutoSync = currentAutoSync;
     syncStateRef.current.isInitialized = true;
 
-    startLiveSync();
+    if (company?.id && user?.uid && currentAutoSync) {
+      startLiveSync();
+    }
 
     // Cleanup on unmount
     return () => {
@@ -162,15 +204,15 @@ function HomeContent() {
         liveSyncUnsub();
       }
     };
-  }, [startLiveSync, liveSyncUnsub]); // Clean dependencies
+  }, [startLiveSync, liveSyncUnsub, company?.id, user?.uid, snap.prefs.autoSync]); // Clean dependencies
 
-  // Enhanced setSnap that automatically syncs to cloud when LiveSync is active
+  // Enhanced setSnap that automatically syncs to cloud - always save to database
   const setSnapWithSync = (newSnap: Snapshot | ((prev: Snapshot) => Snapshot)) => {
     setSnap(prevSnap => {
       const updatedSnap = typeof newSnap === 'function' ? newSnap(prevSnap) : newSnap;
       
-      // Auto-sync to cloud if LiveSync is active - with debouncing to prevent excessive writes
-      if (liveSyncUnsub && snap.prefs.syncCode?.trim()) {
+      // Always sync to cloud when user and company are available - with debouncing to prevent excessive writes
+      if (company?.id && user?.uid) {
         // Debounce sync operations to prevent excessive Firestore writes
         setTimeout(async () => {
           try {
@@ -181,10 +223,10 @@ function HomeContent() {
               updatedSnap.watch.status !== prevSnap.watch.status;
             
             if (hasSignificantChanges) {
-              await pushSnapshot(snap.prefs.syncCode!, updatedSnap);
+              await pushSnapshot(company.id, user.uid, updatedSnap);
             }
           } catch (error) {
-            console.error('Auto-sync failed:', error);
+            console.error('Sync to database failed:', error);
           }
         }, 1000); // Wait 1 second before syncing to batch changes
       }
@@ -276,6 +318,23 @@ function HomeContent() {
 
             {/* Enhanced Status Indicators */}
             <div className="flex items-center space-x-6">
+              {/* User & Company Info */}
+              <div className="hidden sm:flex items-center space-x-3 text-sm">
+                {company && (
+                  <div className="flex items-center space-x-2 px-3 py-2 rounded-lg border bg-slate-800/50 border-slate-700/50">
+                    <div className="w-2 h-2 bg-violet-500 rounded-full"></div>
+                    <span className="text-slate-300 font-medium">{company.name}</span>
+                  </div>
+                )}
+                {userProfile && (
+                  <div className="flex items-center space-x-2 px-3 py-2 rounded-lg border bg-slate-800/50 border-slate-700/50">
+                    <span className="text-slate-300 text-xs">
+                      {userProfile.displayName || userProfile.email}
+                    </span>
+                  </div>
+                )}
+              </div>
+              
               <div className="hidden sm:flex items-center space-x-3 text-sm">
                 <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg border ${
                   snap.prefs.autoSync
@@ -296,6 +355,59 @@ function HomeContent() {
                   </span>
                 </div>
               </div>
+              
+              {/* Dashboard Button (All Users) */}
+              <a
+                href="/dashboard"
+                className="px-4 py-2 rounded-lg border border-violet-500/30 bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 font-medium transition-colors duration-200"
+                title="Company Dashboard"
+              >
+                <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <span className="hidden lg:inline">Dashboard</span>
+              </a>
+              
+              {/* Add Employee Button (Admin Only) */}
+              {userProfile?.role === 'admin' && (
+                <a
+                  href="/admin/employees"
+                  className="px-4 py-2 rounded-lg border border-emerald-500/30 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-medium transition-colors duration-200"
+                  title="Add Employee"
+                >
+                  <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span className="hidden lg:inline">Add Employee</span>
+                </a>
+              )}
+              
+              {/* Profile Button */}
+              <a
+                href="/profile"
+                className="px-4 py-2 rounded-lg border border-slate-500/30 bg-slate-500/20 hover:bg-slate-500/30 text-slate-300 font-medium transition-colors duration-200"
+                title="My Profile"
+              >
+                <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span className="hidden lg:inline">Profile</span>
+              </a>
+              
+              {/* Logout Button */}
+              <button
+                onClick={async () => {
+                  await signOut();
+                  router.push('/auth/login');
+                }}
+                className="px-4 py-2 rounded-lg border border-red-500/30 bg-red-500/20 hover:bg-red-500/30 text-red-300 font-medium transition-colors duration-200"
+                title="Sign Out"
+              >
+                <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span className="hidden lg:inline">Sign Out</span>
+              </button>
               
               {/* Enhanced Quick Stats */}
               <div className="hidden lg:flex items-center space-x-6">
@@ -358,23 +470,23 @@ function HomeContent() {
                       <span className="font-mono font-bold text-violet-400">{snap.prefs.targetMinutes || 420}m</span>
                     </div>
                     <div className={`flex items-center justify-between p-3 rounded-xl border transition-colors duration-300 ${
-                      liveSyncUnsub && snap.prefs.syncCode?.trim()
+                      liveSyncUnsub && snap.prefs.autoSync && company?.id && user?.uid
                         ? 'bg-emerald-500/20 border-emerald-500/30 hover:bg-emerald-500/30'
                         : 'bg-slate-800/50 border-slate-700/50 hover:bg-slate-800/70'
                     }`}>
                       <span className="text-slate-400 text-sm">LiveSync</span>
                       <div className="flex items-center space-x-2">
                         <div className={`w-2 h-2 rounded-full ${
-                          liveSyncUnsub && snap.prefs.syncCode?.trim()
+                          liveSyncUnsub && snap.prefs.autoSync && company?.id && user?.uid
                             ? 'bg-emerald-500 animate-pulse'
                             : 'bg-slate-500'
                         }`}></div>
                         <span className={`font-mono font-bold ${
-                          liveSyncUnsub && snap.prefs.syncCode?.trim()
+                          liveSyncUnsub && snap.prefs.autoSync && company?.id && user?.uid
                             ? 'text-emerald-400'
                             : 'text-slate-400'
                         }`}>
-                          {liveSyncUnsub && snap.prefs.syncCode?.trim() ? 'Active' : 'Offline'}
+                          {liveSyncUnsub && snap.prefs.autoSync && company?.id && user?.uid ? 'Active' : 'Offline'}
                         </span>
                       </div>
                     </div>
@@ -435,6 +547,12 @@ function HomeContent() {
                 {tab === 'sync' && <SyncPanel snap={snap} setSnap={setSnapWithSync} />}
                 {tab === 'settings' && <SettingsPanel snap={snap} setSnap={setSnapWithSync} />}
               </div>
+              
+              {/* Onboarding Flow */}
+              <OnboardingFlow snap={snap} setSnap={setSnapWithSync} />
+              
+              {/* PWA Install Prompt */}
+              <PWARegistration />
             </div>
           </main>
         </div>

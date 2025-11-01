@@ -1,23 +1,11 @@
-// Firestore-based sync keyed by SHA-256(passcode) -> roomId (doc id)
+// Firestore-based sync for user-specific data
 // Functions: pullSnapshot, pushSnapshot, subscribeRoom, autoSync
-// Notes: For personal use. Anyone knowing the passcode can derive the same room id.
+// Notes: Data is stored per user in companies/{companyId}/users/{userId}/data
 
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
-import { db, ensureAnonSignIn } from './firebase';
+import { db } from './firebase';
 import type { Snapshot, DeviceInfo } from './types';
 import { createDeviceInfo, isDeviceActive } from './deviceUtils';
-
-// Simple client-side SHA-256
-async function sha256Hex(input: string): Promise<string> {
-  const enc = new TextEncoder().encode(input.trim());
-  const buf = await crypto.subtle.digest('SHA-256', enc);
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-export async function roomIdFromPasscode(code: string) {
-  if (!code || !code.trim()) throw new Error('Passcode required');
-  return await sha256Hex(code);
-}
 
 /** Check if Firebase is available */
 function isFirebaseAvailable() {
@@ -28,16 +16,19 @@ function isFirebaseAvailable() {
 const syncDebounceMap = new Map<string, NodeJS.Timeout>();
 
 /** Pull snapshot from Firestore (if it exists) */
-export async function pullSnapshot(passcode: string): Promise<Snapshot | null> {
+export async function pullSnapshot(companyId: string, userId: string): Promise<Snapshot | null> {
   try {
     if (!isFirebaseAvailable()) {
       console.warn('Firebase not configured, skipping pull operation');
       return null;
     }
     
-    await ensureAnonSignIn();
-    const roomId = await roomIdFromPasscode(passcode);
-    const ref = doc(db!, 'rooms', roomId);
+    if (!companyId || !userId) {
+      console.warn('Company ID and User ID are required');
+      return null;
+    }
+    
+    const ref = doc(db!, 'companies', companyId, 'users', userId, 'data', 'snapshot');
     const snap = await getDoc(ref);
     if (!snap.exists()) return null;
     const data = snap.data();
@@ -49,16 +40,21 @@ export async function pullSnapshot(passcode: string): Promise<Snapshot | null> {
 }
 
 /** Push (upsert) snapshot to Firestore with debouncing */
-export async function pushSnapshot(passcode: string, snapshot: Snapshot): Promise<boolean> {
+export async function pushSnapshot(companyId: string, userId: string, snapshot: Snapshot): Promise<boolean> {
   try {
     if (!isFirebaseAvailable()) {
       console.warn('Firebase not configured, skipping push operation');
       return false;
     }
     
+    if (!companyId || !userId) {
+      console.warn('Company ID and User ID are required');
+      return false;
+    }
+    
     // Debounce rapid successive calls to prevent excessive writes
-    const roomId = await roomIdFromPasscode(passcode);
-    const existingTimeout = syncDebounceMap.get(roomId);
+    const syncKey = `${companyId}:${userId}`;
+    const existingTimeout = syncDebounceMap.get(syncKey);
     
     if (existingTimeout) {
       clearTimeout(existingTimeout);
@@ -67,18 +63,17 @@ export async function pushSnapshot(passcode: string, snapshot: Snapshot): Promis
     // Set a new timeout for the actual write
     const timeoutId = setTimeout(async () => {
       try {
-        await ensureAnonSignIn();
-        const ref = doc(db!, 'rooms', roomId);
+        const ref = doc(db!, 'companies', companyId, 'users', userId, 'data', 'snapshot');
         await setDoc(ref, snapshot);
         console.log('Snapshot synced to Firestore successfully');
       } catch (error) {
         console.error('Debounced push failed:', error);
       } finally {
-        syncDebounceMap.delete(roomId);
+        syncDebounceMap.delete(syncKey);
       }
     }, 2000); // Wait 2 seconds before writing to batch rapid changes
     
-    syncDebounceMap.set(roomId, timeoutId);
+    syncDebounceMap.set(syncKey, timeoutId);
     return true;
   } catch (error) {
     console.error('Push failed:', error);
@@ -87,16 +82,23 @@ export async function pushSnapshot(passcode: string, snapshot: Snapshot): Promis
 }
 
 /** Live subscribe; returns unsubscribe function */
-export async function subscribeRoom(passcode: string, callback: (snapshot: Snapshot | null) => void): Promise<() => void> {
+export async function subscribeRoom(
+  companyId: string, 
+  userId: string, 
+  callback: (snapshot: Snapshot | null) => void
+): Promise<() => void> {
   try {
     if (!isFirebaseAvailable()) {
       console.warn('Firebase not configured, skipping subscription');
       return () => {}; // Return no-op unsubscribe function
     }
     
-    await ensureAnonSignIn();
-    const roomId = await roomIdFromPasscode(passcode);
-    const ref = doc(db!, 'rooms', roomId);
+    if (!companyId || !userId) {
+      console.warn('Company ID and User ID are required');
+      return () => {};
+    }
+    
+    const ref = doc(db!, 'companies', companyId, 'users', userId, 'data', 'snapshot');
     
     const unsubscribe = onSnapshot(ref, (snap) => {
       if (snap.exists()) {
@@ -115,7 +117,8 @@ export async function subscribeRoom(passcode: string, callback: (snapshot: Snaps
 
 /** Automatic sync function that pulls latest data and sets up real-time sync */
 export async function autoSync(
-  passcode: string, 
+  companyId: string,
+  userId: string,
   currentSnapshot: Snapshot,
   onSnapshotUpdate: (snapshot: Snapshot) => void,
   onError?: (error: string) => void
@@ -123,6 +126,12 @@ export async function autoSync(
   try {
     if (!isFirebaseAvailable()) {
       const message = 'Firebase not configured, sync disabled';
+      onError?.(message);
+      return { success: false, message };
+    }
+
+    if (!companyId || !userId) {
+      const message = 'Company ID and User ID are required for sync';
       onError?.(message);
       return { success: false, message };
     }
@@ -139,7 +148,7 @@ export async function autoSync(
     };
 
     // First, pull the latest data from the cloud
-    const cloudSnapshot = await pullSnapshot(passcode);
+    const cloudSnapshot = await pullSnapshot(companyId, userId);
     
     if (cloudSnapshot) {
       // If cloud data exists, check if it's newer than local data
@@ -157,7 +166,7 @@ export async function autoSync(
         onSnapshotUpdate(mergedSnapshot);
         
         // Set up real-time sync for future updates
-        const unsubscribe = await subscribeRoom(passcode, (newSnapshot) => {
+        const unsubscribe = await subscribeRoom(companyId, userId, (newSnapshot) => {
           if (newSnapshot && newSnapshot.updatedAt > currentSnapshot.updatedAt) {
             const mergedSnapshot = {
               ...newSnapshot,
@@ -178,10 +187,10 @@ export async function autoSync(
         };
       } else {
         // Local data is newer or same, push local data to cloud
-        await pushSnapshot(passcode, updatedSnapshot);
+        await pushSnapshot(companyId, userId, updatedSnapshot);
         
         // Set up real-time sync
-        const unsubscribe = await subscribeRoom(passcode, (newSnapshot) => {
+        const unsubscribe = await subscribeRoom(companyId, userId, (newSnapshot) => {
           if (newSnapshot && newSnapshot.updatedAt > currentSnapshot.updatedAt) {
             const mergedSnapshot = {
               ...newSnapshot,
@@ -203,10 +212,10 @@ export async function autoSync(
       }
     } else {
       // No cloud data exists, push local data and set up sync
-      await pushSnapshot(passcode, updatedSnapshot);
+      await pushSnapshot(companyId, userId, updatedSnapshot);
       
       // Set up real-time sync
-      const unsubscribe = await subscribeRoom(passcode, (newSnapshot) => {
+      const unsubscribe = await subscribeRoom(companyId, userId, (newSnapshot) => {
         if (newSnapshot && newSnapshot.updatedAt > currentSnapshot.updatedAt) {
           const mergedSnapshot = {
             ...newSnapshot,

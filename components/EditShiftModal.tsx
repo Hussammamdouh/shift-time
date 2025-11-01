@@ -22,6 +22,8 @@ export default function EditShiftModal({
   const [breaks, setBreaks] = useState<{start:string; end:string}[]>([]);
   const [note, setNote] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [selectedTaskId, setSelectedTaskId] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [isFormValid, setIsFormValid] = useState(false);
 
@@ -38,6 +40,8 @@ export default function EditShiftModal({
       setBreaks(br.length ? br : []);
       setNote('');
       setTags([]);
+      setSelectedProjectId('');
+      setSelectedTaskId('');
     } else {
       const r = target.record;
       setStart(toLocalDT(r.startMs));
@@ -45,6 +49,8 @@ export default function EditShiftModal({
       setBreaks((r.breaks||[]).map(b=>({ start: toLocalDT(b.startMs), end: toLocalDT(b.endMs) })));
       setNote(r.note || '');
       setTags(r.tags || []);
+      setSelectedProjectId(r.projectId || '');
+      setSelectedTaskId(r.taskId || '');
     }
   }, [open, target, snap.watch]);
 
@@ -114,6 +120,8 @@ export default function EditShiftModal({
         breaks: br.filter((x): x is {startMs:number; endMs:number} => x.endMs!=null) as HistoryRec['breaks'],
         breakMs, netMs,
         note, tags,
+        projectId: selectedProjectId || undefined,
+        taskId: selectedTaskId || undefined,
       };
       
       const next = {
@@ -297,6 +305,55 @@ export default function EditShiftModal({
             </div>
           ))}
         </div>
+
+        {/* Project/Task Assignment */}
+        {(snap.projects?.length || 0) > 0 && (
+          <div className="card space-y-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-r from-violet-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-200">Project & Task</h3>
+                <p className="text-sm text-slate-400">Assign this shift to a project or task</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="form-label">Project</label>
+                <select
+                  className="input"
+                  value={selectedProjectId}
+                  onChange={(e) => {
+                    setSelectedProjectId(e.target.value);
+                    setSelectedTaskId(''); // Reset task when project changes
+                  }}
+                >
+                  <option value="">No project</option>
+                  {snap.projects?.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="form-label">Task</label>
+                <select
+                  className="input"
+                  value={selectedTaskId}
+                  onChange={(e) => setSelectedTaskId(e.target.value)}
+                  disabled={!selectedProjectId}
+                >
+                  <option value="">No task</option>
+                  {snap.tasks?.filter(t => t.projectId === selectedProjectId).map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Enhanced Annotations */}
         <div className="card space-y-6">

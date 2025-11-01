@@ -1,8 +1,8 @@
-// Client-only Firebase init (Firestore + Anonymous Auth)
-// Usage: import { db, ensureAnonSignIn } from '@/lib/firebase'
+// Client-only Firebase init (Firestore + Email/Password Auth)
+// Usage: import { db, auth } from '@/lib/firebase'
 
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth, signInAnonymously } from 'firebase/auth';
+import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
 // Validate required environment variables
@@ -83,37 +83,6 @@ if (hasValidConfig) {
 }
 
 export { app, auth, db };
-
-/** Ensure there's an anonymous user before any Firestore call */
-export async function ensureAnonSignIn() {
-  if (!hasValidConfig) {
-    console.warn('Firebase not configured. Authentication disabled.');
-    return null;
-  }
-  
-  if (!auth?.currentUser) {
-    try {
-      console.log('Attempting anonymous sign in...');
-      await signInAnonymously(auth!);
-      console.log('Anonymous sign in successful');
-    } catch (error: unknown) {
-      console.error('Failed to sign in anonymously:', error);
-      
-      // Handle specific Firebase errors
-      if (error && typeof error === 'object' && 'code' in error) {
-        const errorObj = error as { code?: string };
-        if (errorObj.code === 'auth/unauthorized-domain') {
-          console.error('Domain not authorized. Add your domain to Firebase Console > Authentication > Settings > Authorized domains');
-        } else if (errorObj.code === 'auth/quota-exceeded') {
-          console.error('Firebase quota exceeded. Please upgrade your plan.');
-        }
-      }
-      
-      return null;
-    }
-  }
-  return auth?.currentUser || null;
-}
 
 /** Check if Firebase is available and handle quota errors gracefully */
 export function isFirebaseAvailable() {

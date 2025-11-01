@@ -21,6 +21,8 @@ export type HistoryRec = {
   netMs: number;
   note: string;
   tags: string[];
+  projectId?: string; // Optional project assignment
+  taskId?: string; // Optional task assignment
 };
 
 export type WatchState = {
@@ -39,13 +41,33 @@ export type Preferences = {
   hourFormat: 12 | 24;
   theme: 'dark' | 'light';
   targetMinutes?: number;
-  hourlyRate?: number; // New: Hourly rate for billing calculations
-  monthlySalary?: number; // New: Monthly salary for automatic hourly rate calculation
-  currency?: string; // New: Currency for billing display
-  vacationDate?: string; // New: Date picker for adding vacation days
+  hourlyRate?: number; // Regular hourly rate for billing calculations
+  overtimeRate?: number; // Overtime hourly rate (separate from regular rate)
+  overtimeThreshold?: number; // Hours after which overtime applies (default: 7)
+  monthlySalary?: number; // Monthly salary for automatic hourly rate calculation
+  currency?: string; // Currency for billing display
+  vacationDate?: string; // Date picker for adding vacation days
   autoSync: boolean;
   syncCode: string;
-  compactMode?: boolean; // New: Compact UI scale for mobile-like layout
+  compactMode?: boolean; // Compact UI scale for mobile-like layout
+};
+
+export type Project = {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string; // Hex color for UI
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type Task = {
+  id: string;
+  projectId: string;
+  name: string;
+  description?: string;
+  createdAt: number;
+  updatedAt: number;
 };
 
 export type Snapshot = {
@@ -58,4 +80,7 @@ export type Snapshot = {
   prefs: Preferences;
   devices?: DeviceInfo[];
   currentDeviceId?: string;
+  projects?: Project[]; // User's projects
+  tasks?: Task[]; // User's tasks
+  onboardingCompleted?: boolean; // Track if onboarding was completed
 };
