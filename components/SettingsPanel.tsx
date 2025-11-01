@@ -566,7 +566,7 @@ export default function SettingsPanel({ snap, setSnap }: { snap: Snapshot; setSn
                   confirmPassword: '',
                 });
                 setTimeout(() => setMessage(''), 3000);
-              } catch (error) {
+              } catch (error: unknown) {
                 setMessage(error instanceof Error ? error.message : 'Failed to change password');
                 setTimeout(() => setMessage(''), 5000);
               } finally {

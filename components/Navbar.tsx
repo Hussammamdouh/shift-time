@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { useAuth } from '@/lib/auth';
 
 type Tab = 'watch' | 'manual' | 'report' | 'sync' | 'settings';
 
@@ -80,10 +82,11 @@ const tabConfig = {
 
 export default function Navbar({ tab, setTab }: Props) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { userProfile } = useAuth();
 
   return (
     <>
-      {/* Enhanced Desktop Navigation (header removed for compactness) */}
+      {/* Enhanced Desktop Navigation */}
       <nav className="hidden lg:block space-y-4">
         <div className="space-y-3">
           {(Object.keys(tabConfig) as Tab[]).map((tabKey, index) => {
@@ -150,6 +153,64 @@ export default function Navbar({ tab, setTab }: Props) {
               </button>
             );
           })}
+        </div>
+
+        {/* Dashboard Link (Desktop) */}
+        <div className="mt-6 pt-6 border-t border-slate-700/50">
+          <Link
+            href="/dashboard"
+            className="w-full group relative overflow-hidden rounded-2xl p-4 text-left transition-all duration-500 transform hover:scale-105 hover:bg-slate-800/50 border border-transparent hover:border-slate-600/50 hover:shadow-lg"
+          >
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-slate-700/50 text-slate-400 group-hover:bg-slate-600/50 group-hover:text-slate-300 group-hover:scale-110 transition-all duration-500">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-base transition-colors duration-300 text-slate-200 group-hover:text-white">
+                  Dashboard
+                </div>
+                <div className="text-sm transition-colors duration-300 text-slate-400 group-hover:text-slate-300">
+                  Company overview
+                </div>
+              </div>
+              <div className="w-5 h-5 text-slate-400 group-hover:text-slate-300 transition-all duration-300 transform group-hover:translate-x-1">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          </Link>
+
+          {/* Add Employee Link (Admin Only - Desktop) */}
+          {userProfile?.role === 'admin' && (
+            <Link
+              href="/admin/employees"
+              className="w-full group relative overflow-hidden rounded-2xl p-4 text-left transition-all duration-500 transform hover:scale-105 hover:bg-emerald-500/10 border border-transparent hover:border-emerald-500/30 hover:shadow-lg mt-3"
+            >
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500/30 group-hover:scale-110 transition-all duration-500">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-base transition-colors duration-300 text-slate-200 group-hover:text-white">
+                    Add Employee
+                  </div>
+                  <div className="text-sm transition-colors duration-300 text-slate-400 group-hover:text-slate-300">
+                    Manage team
+                  </div>
+                </div>
+                <div className="w-5 h-5 text-emerald-400 group-hover:text-emerald-300 transition-all duration-300 transform group-hover:translate-x-1">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            </Link>
+          )}
         </div>
       </nav>
 
@@ -223,11 +284,47 @@ export default function Navbar({ tab, setTab }: Props) {
                 </button>
               );
             })}
+
+            {/* Dashboard Link (Mobile) */}
+            <div className="mt-4 pt-4 border-t border-slate-700/50">
+              <Link
+                href="/dashboard"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="w-full flex items-center space-x-4 p-4 rounded-2xl transition-all duration-300 transform hover:scale-105 hover:bg-slate-800/70 hover:shadow-lg"
+              >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-700/50 text-slate-400">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="font-semibold text-slate-200">Dashboard</div>
+                  <div className="text-sm text-slate-400">Company overview</div>
+                </div>
+              </Link>
+
+              {/* Add Employee Link (Admin Only - Mobile) */}
+              {userProfile?.role === 'admin' && (
+                <Link
+                  href="/admin/employees"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full flex items-center space-x-4 p-4 rounded-2xl transition-all duration-300 transform hover:scale-105 hover:bg-emerald-500/10 hover:shadow-lg mt-3"
+                >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-500/20 text-emerald-400">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="font-semibold text-slate-200">Add Employee</div>
+                    <div className="text-sm text-slate-400">Manage team</div>
+                  </div>
+                </Link>
+              )}
+            </div>
           </div>
         )}
       </div>
-
-      
     </>
   );
 }

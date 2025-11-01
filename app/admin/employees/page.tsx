@@ -186,26 +186,29 @@ function EmployeesContent() {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
+      {/* Clean Header */}
       <header className="sticky top-0 z-40 glass-nav border-b border-slate-700/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between h-auto sm:h-16 lg:h-20 py-4 sm:py-0 gap-4 sm:gap-0">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-r from-violet-600 via-violet-500 to-cyan-600 rounded-2xl flex items-center justify-center shadow-glow pulse-glow">
-                <svg className="w-7 h-7 lg:w-8 lg:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex items-center justify-between h-16 lg:h-20">
+            {/* Logo & Brand */}
+            <div className="flex items-center space-x-3 sm:space-x-4 flex-shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-gradient-to-r from-violet-600 via-violet-500 to-cyan-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-glow pulse-glow">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text-animate ribbon">
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text-animate ribbon truncate">
                   Employee Management
                 </h1>
-                <p className="text-xs sm:text-sm lg:text-base text-slate-400 hidden sm:block">
+                <p className="text-xs sm:text-sm lg:text-base text-slate-400 hidden sm:block truncate">
                   {company?.name} • {employees.length} employee{employees.length !== 1 ? 's' : ''}
                 </p>
               </div>
             </div>
-            <div className="flex items-center space-x-2 sm:space-x-4 w-full sm:w-auto">
+
+            {/* Right Side Actions */}
+            <div className="flex items-center space-x-2 sm:space-x-3">
               <button
                 onClick={() => {
                   setShowAddForm(!showAddForm);
@@ -217,22 +220,30 @@ function EmployeesContent() {
                     displayName: '',
                   });
                 }}
-                className="btn btn-primary btn-sm flex-1 sm:flex-none"
+                className="p-2 sm:px-3 sm:py-2 rounded-lg border border-emerald-500/30 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-medium transition-colors duration-200 flex items-center"
               >
-                <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                {showAddForm ? 'Cancel' : 'Add Employee'}
+                <span className="hidden sm:inline ml-2">{showAddForm ? 'Cancel' : 'Add Employee'}</span>
               </button>
-              <Link href="/dashboard" className="btn btn-ghost btn-sm flex-1 sm:flex-none">
-                <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <Link 
+                href="/dashboard" 
+                className="p-2 sm:px-3 sm:py-2 rounded-lg border border-slate-500/30 bg-slate-500/20 hover:bg-slate-500/30 text-slate-300 font-medium transition-colors duration-200 flex items-center"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
-                Dashboard
+                <span className="hidden sm:inline ml-2">Dashboard</span>
               </Link>
-              <Link href="/" className="btn btn-secondary btn-sm flex-1 sm:flex-none">
-                <span className="hidden sm:inline">Back to App</span>
-                <span className="sm:hidden">Back</span>
+              <Link 
+                href="/" 
+                className="p-2 sm:px-3 sm:py-2 rounded-lg border border-violet-500/30 bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 font-medium transition-colors duration-200 flex items-center"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                <span className="hidden sm:inline ml-2">Back</span>
               </Link>
             </div>
           </div>

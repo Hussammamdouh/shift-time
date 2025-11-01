@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { Snapshot } from '@/lib/types';
 import { loadLocal, saveLocal } from '@/lib/storage';
 import { useAuth } from '@/lib/auth';
@@ -17,7 +18,8 @@ import { subscribeRoom, pushSnapshot, pullSnapshot } from '@/lib/sync';
 import OnboardingFlow from './OnboardingFlow';
 import PWARegistration from './PWARegistration';
 
-const emptySnapshot: Snapshot = {
+// Create empty snapshot function to avoid hydration mismatch
+const createEmptySnapshot = (): Snapshot => ({
   schemaVersion: 1,
   createdAt: Date.now(),
   updatedAt: Date.now(),
@@ -35,14 +37,14 @@ const emptySnapshot: Snapshot = {
   }, // syncCode kept for backward compatibility but not used
   devices: [],
   currentDeviceId: undefined,
-};
+});
 
 function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, userProfile, company, signOut } = useAuth();
   const [snap, setSnap] = useState<Snapshot>(() => {
-    try { return loadLocal(user?.uid); } catch { return emptySnapshot; }
+    try { return loadLocal(user?.uid); } catch { return createEmptySnapshot(); }
   });
   
   const initialTab = searchParams.get('tab') as 'watch' | 'manual' | 'report' | 'sync' | 'settings' || 'watch';
@@ -300,140 +302,93 @@ function HomeContent() {
 
   return (
     <div className={`min-h-screen ${snap.prefs.compactMode ? 'compact' : ''}`}>
-      {/* Enhanced Top Navigation Bar */}
+      {/* Clean Top Navigation Bar */}
       <header className="sticky top-0 z-40 glass-nav border-b border-slate-700/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 lg:h-20">
-            {/* Enhanced Logo & Brand */}
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-r from-violet-600 via-violet-500 to-cyan-600 rounded-2xl flex items-center justify-center shadow-glow pulse-glow">
-                <svg className="w-7 h-7 lg:w-8 lg:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Logo & Brand */}
+            <div className="flex items-center space-x-3 sm:space-x-4 flex-shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-gradient-to-r from-violet-600 via-violet-500 to-cyan-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-glow pulse-glow">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <div>
-                <h1 className="text-2xl lg:text-3xl font-bold gradient-text-animate ribbon">
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text-animate ribbon truncate">
                   Shift Tracker
                 </h1>
-                <p className="text-sm lg:text-base text-slate-400 hidden sm:block">Professional Time Management</p>
+                <p className="text-xs sm:text-sm lg:text-base text-slate-400 hidden sm:block truncate">Professional Time Management</p>
               </div>
             </div>
 
-            {/* Enhanced Status Indicators */}
-            <div className="flex items-center space-x-6">
-              {/* User & Company Info */}
-              <div className="hidden sm:flex items-center space-x-3 text-sm">
+            {/* Right Side Actions - Responsive */}
+            <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4">
+              {/* User & Company Info - Desktop Only */}
+              <div className="hidden lg:flex items-center space-x-3 text-sm">
                 {company && (
                   <div className="flex items-center space-x-2 px-3 py-2 rounded-lg border bg-slate-800/50 border-slate-700/50">
                     <div className="w-2 h-2 bg-violet-500 rounded-full"></div>
-                    <span className="text-slate-300 font-medium">{company.name}</span>
+                    <span className="text-slate-300 font-medium truncate max-w-[120px]">{company.name}</span>
                   </div>
                 )}
                 {userProfile && (
                   <div className="flex items-center space-x-2 px-3 py-2 rounded-lg border bg-slate-800/50 border-slate-700/50">
-                    <span className="text-slate-300 text-xs">
+                    <span className="text-slate-300 text-xs truncate max-w-[150px]">
                       {userProfile.displayName || userProfile.email}
                     </span>
                   </div>
                 )}
               </div>
-              
-              <div className="hidden sm:flex items-center space-x-3 text-sm">
-                <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg border ${
-                  snap.prefs.autoSync
-                    ? 'bg-emerald-500/20 border-emerald-500/30'
-                    : 'bg-slate-500/20 border-slate-500/30'
-                }`}>
-                  <div className={`w-2 h-2 rounded-full ${
-                    snap.prefs.autoSync
-                      ? 'bg-emerald-500 animate-pulse'
-                      : 'bg-slate-500'
-                  }`}></div>
-                  <span className={`font-medium ${
-                    snap.prefs.autoSync
-                      ? 'text-emerald-300'
-                      : 'text-slate-400'
-                  }`}>
-                    {snap.prefs.autoSync ? 'Auto Sync Active' : 'Local Only'}
-                  </span>
-                </div>
-              </div>
-              
-              {/* Dashboard Button (All Users) */}
-              <a
-                href="/dashboard"
-                className="px-4 py-2 rounded-lg border border-violet-500/30 bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 font-medium transition-colors duration-200"
-                title="Company Dashboard"
-              >
-                <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                <span className="hidden lg:inline">Dashboard</span>
-              </a>
-              
-              {/* Add Employee Button (Admin Only) */}
-              {userProfile?.role === 'admin' && (
-                <a
-                  href="/admin/employees"
-                  className="px-4 py-2 rounded-lg border border-emerald-500/30 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-medium transition-colors duration-200"
-                  title="Add Employee"
-                >
-                  <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  <span className="hidden lg:inline">Add Employee</span>
-                </a>
-              )}
-              
-              {/* Profile Button */}
-              <a
-                href="/profile"
-                className="px-4 py-2 rounded-lg border border-slate-500/30 bg-slate-500/20 hover:bg-slate-500/30 text-slate-300 font-medium transition-colors duration-200"
-                title="My Profile"
-              >
-                <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                <span className="hidden lg:inline">Profile</span>
-              </a>
-              
-              {/* Logout Button */}
-              <button
-                onClick={async () => {
-                  await signOut();
-                  router.push('/auth/login');
-                }}
-                className="px-4 py-2 rounded-lg border border-red-500/30 bg-red-500/20 hover:bg-red-500/30 text-red-300 font-medium transition-colors duration-200"
-                title="Sign Out"
-              >
-                <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                <span className="hidden lg:inline">Sign Out</span>
-              </button>
-              
-              {/* Enhanced Quick Stats */}
-              <div className="hidden lg:flex items-center space-x-6">
-                <div className="flex items-center space-x-3 px-4 py-2 bg-slate-800/50 rounded-xl border border-slate-700/50 backdrop-blur-sm">
+
+              {/* Quick Stats - Desktop Only */}
+              <div className="hidden xl:flex items-center space-x-4">
+                <div className="flex items-center space-x-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700/50 backdrop-blur-sm">
                   <div className="w-2 h-2 bg-violet-500 rounded-full"></div>
-                  <span className="text-slate-300 font-medium">Shifts:</span>
-                  <span className="font-mono font-bold text-violet-400">{totalShifts}</span>
+                  <span className="text-slate-300 text-sm font-medium">Shifts:</span>
+                  <span className="font-mono font-bold text-violet-400 text-sm">{totalShifts}</span>
                 </div>
-                <div className="flex items-center space-x-3 px-4 py-2 bg-slate-800/50 rounded-xl border border-slate-700/50 backdrop-blur-sm">
+                <div className="flex items-center space-x-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700/50 backdrop-blur-sm">
                   <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                  <span className="text-slate-300 font-medium">Hours:</span>
-                  <span className="font-mono font-bold text-emerald-400">{Math.floor(totalNetHours).toString().padStart(2, '0')}:{Math.round((totalNetHours % 1) * 60).toString().padStart(2, '0')}</span>
+                  <span className="text-slate-300 text-sm font-medium">Hours:</span>
+                  <span className="font-mono font-bold text-emerald-400 text-sm">{Math.floor(totalNetHours).toString().padStart(2, '0')}:{Math.round((totalNetHours % 1) * 60).toString().padStart(2, '0')}</span>
                 </div>
                 {hourlyRate > 0 && (
-                  <div className="flex items-center space-x-3 px-4 py-2 bg-emerald-500/20 rounded-xl border border-emerald-500/30 backdrop-blur-sm">
+                  <div className="flex items-center space-x-2 px-3 py-2 bg-emerald-500/20 rounded-lg border border-emerald-500/30 backdrop-blur-sm">
                     <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                    <span className="text-slate-300 font-medium">Earnings:</span>
-                    <span className="font-mono font-bold text-emerald-400">
+                    <span className="text-slate-300 text-sm font-medium">Earnings:</span>
+                    <span className="font-mono font-bold text-emerald-400 text-sm">
                       {totalEarnings.toFixed(0)} {snap.prefs.currency || 'EGP'}
                     </span>
                   </div>
                 )}
               </div>
+
+              {/* Profile Button - Icon Only on Mobile */}
+              <Link
+                href="/profile"
+                className="p-2 sm:px-3 sm:py-2 rounded-lg border border-slate-500/30 bg-slate-500/20 hover:bg-slate-500/30 text-slate-300 font-medium transition-colors duration-200 flex items-center"
+                title="My Profile"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span className="hidden sm:inline ml-2">Profile</span>
+              </Link>
+              
+              {/* Logout Button - Icon Only on Mobile */}
+              <button
+                onClick={async () => {
+                  await signOut();
+                  router.push('/auth/login');
+                }}
+                className="p-2 sm:px-3 sm:py-2 rounded-lg border border-red-500/30 bg-red-500/20 hover:bg-red-500/30 text-red-300 font-medium transition-colors duration-200 flex items-center"
+                title="Sign Out"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span className="hidden sm:inline ml-2">Sign Out</span>
+              </button>
             </div>
           </div>
         </div>

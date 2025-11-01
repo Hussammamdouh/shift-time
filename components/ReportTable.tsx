@@ -570,7 +570,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
               <select
                 className="input w-full"
                 value={quickFilter}
-                onChange={(e) => {
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                   setQuickFilter(e.target.value as 'all' | 'today' | 'week' | 'month' | 'year');
                   setDateRange({ start: '', end: '' }); // Clear custom range when using quick filter
                 }}

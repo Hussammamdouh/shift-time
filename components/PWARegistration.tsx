@@ -18,7 +18,7 @@ export default function PWARegistration() {
         .then((registration) => {
           console.log('Service Worker registered:', registration);
         })
-        .catch((error) => {
+        .catch((error: unknown) => {
           console.error('Service Worker registration failed:', error);
         });
     }

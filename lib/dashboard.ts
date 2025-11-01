@@ -103,7 +103,7 @@ export function formatCurrency(amount: number, currency: string = 'EGP'): string
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     }).format(amount);
-  } catch {
+  } catch (_error) {
     // Fallback for non-standard currency codes
     return `${amount.toFixed(2)} ${currency}`;
   }

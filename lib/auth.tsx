@@ -134,7 +134,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     // Create user profile document
-    const userProfileData: Omit<UserProfile, 'uid'> = {
+    const userProfileData: UserProfile = {
+      uid: firebaseUser.uid,
       email: firebaseUser.email!,
       displayName,
       companyId,
@@ -182,7 +183,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await updateProfile(firebaseUser, { displayName });
 
       // Create user profile document with employee role
-      const userProfileData: Omit<UserProfile, 'uid'> = {
+      const userProfileData: UserProfile = {
+        uid: firebaseUser.uid,
         email: firebaseUser.email!,
         displayName,
         companyId: company.id,
