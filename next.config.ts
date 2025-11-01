@@ -10,27 +10,12 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: false,
   },
-  output: 'export',
-  trailingSlash: true,
-  // Only apply basePath and assetPrefix in production builds
-  ...(process.env.NODE_ENV === 'production' && {
-    basePath: '/shift-time',
-    assetPrefix: '/shift-time/',
-  }),
   poweredByHeader: false,
   compress: true,
-  generateEtags: false,
   reactStrictMode: true,
   images: {
     unoptimized: true,
-    formats: ['image/webp', 'image/avif'],
   },
-  // Disable server-side features for static export
-  skipTrailingSlashRedirect: true,
-  skipMiddlewareUrlNormalize: true,
-  // Ensure all assets use the correct base path
-  distDir: 'out',
-  // Force all public assets to use basePath
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {

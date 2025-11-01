@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import AdminProtectedRoute from '@/components/AdminProtectedRoute';
 import { PageLoader } from '@/components/LoadingSpinner';
 import { getCompanyUsers } from '@/lib/dashboard';
 import type { UserProfile } from '@/lib/auth';
-import { collection, query, where, getDocs, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 function EmployeesContent() {
@@ -28,6 +29,7 @@ function EmployeesContent() {
 
   useEffect(() => {
     loadEmployees();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company]);
 
   const loadEmployees = async () => {
@@ -39,8 +41,8 @@ function EmployeesContent() {
       // Filter out the current admin
       const employeeList = users.filter(u => u.uid !== userProfile?.uid && u.role !== 'admin');
       setEmployees(employeeList);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load employees');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load employees');
     } finally {
       setLoading(false);
     }
@@ -84,8 +86,8 @@ function EmployeesContent() {
       setTimeout(() => {
         router.push(`/auth/login?email=${encodeURIComponent(adminEmail)}`);
       }, 2000);
-    } catch (err: any) {
-      setError(err.message || 'Failed to create employee');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create employee');
     }
   };
 
@@ -112,8 +114,8 @@ function EmployeesContent() {
       await loadEmployees();
       
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err: any) {
-      setError(err.message || 'Failed to delete employee');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete employee');
     }
   };
 
@@ -147,7 +149,7 @@ function EmployeesContent() {
 
     try {
       // Update user profile
-      const updates: any = {
+      const updates: { displayName: string; updatedAt: ReturnType<typeof serverTimestamp> } = {
         displayName: formData.displayName,
         updatedAt: serverTimestamp(),
       };
@@ -166,8 +168,8 @@ function EmployeesContent() {
       
       await loadEmployees();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err: any) {
-      setError(err.message || 'Failed to update employee');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update employee');
     }
   };
 
@@ -222,16 +224,16 @@ function EmployeesContent() {
                 </svg>
                 {showAddForm ? 'Cancel' : 'Add Employee'}
               </button>
-              <a href="/dashboard" className="btn btn-ghost btn-sm flex-1 sm:flex-none">
+              <Link href="/dashboard" className="btn btn-ghost btn-sm flex-1 sm:flex-none">
                 <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
                 Dashboard
-              </a>
-              <a href="/" className="btn btn-secondary btn-sm flex-1 sm:flex-none">
+              </Link>
+              <Link href="/" className="btn btn-secondary btn-sm flex-1 sm:flex-none">
                 <span className="hidden sm:inline">Back to App</span>
                 <span className="sm:hidden">Back</span>
-              </a>
+              </Link>
             </div>
           </div>
         </div>

@@ -14,6 +14,8 @@ import SettingsPanel from './SettingsPanel';
 import { PageLoader } from './LoadingSpinner';
 import { createDeviceInfo } from '@/lib/deviceUtils';
 import { subscribeRoom, pushSnapshot, pullSnapshot } from '@/lib/sync';
+import OnboardingFlow from './OnboardingFlow';
+import PWARegistration from './PWARegistration';
 
 const emptySnapshot: Snapshot = {
   schemaVersion: 1,
@@ -93,6 +95,7 @@ function HomeContent() {
     };
     
     loadUserData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid, company?.id]); // Only run once when user/company is available
 
   useEffect(() => { 
@@ -177,7 +180,7 @@ function HomeContent() {
     } catch (error) {
       console.error('Auto LiveSync failed:', error);
     }
-  }, [snap.prefs.autoSync, snap, liveSyncUnsub, company?.id, user?.uid]);
+  }, [snap, liveSyncUnsub, company?.id, user?.uid]);
 
   // Auto-start LiveSync when autoSync is enabled and user is authenticated
   useEffect(() => {

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import Link from 'next/link';
 import { getCompanyDashboardData, formatHours, formatCurrency } from '@/lib/dashboard';
 import type { UserDashboardData } from '@/lib/dashboard';
 import { PageLoader } from '@/components/LoadingSpinner';
@@ -39,6 +40,7 @@ function DashboardContent() {
     const interval = setInterval(loadDashboardData, 30000);
     
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company?.id]);
 
   const getStatusBadge = (status: string) => {
@@ -82,7 +84,6 @@ function DashboardContent() {
   // Calculate totals
   const totalEmployees = dashboardData.length;
   const workingCount = dashboardData.filter(u => u.currentStatus === 'WORKING').length;
-  const onBreakCount = dashboardData.filter(u => u.currentStatus === 'ON_BREAK').length;
   const totalEarnings = isAdmin ? dashboardData.reduce((sum, u) => sum + u.totalEarnings, 0) : 0;
   const totalHours = dashboardData.reduce((sum, u) => sum + u.totalHours, 0);
 
@@ -121,13 +122,13 @@ function DashboardContent() {
                 </svg>
                 <span className="hidden sm:inline">Refresh</span>
               </button>
-              <a
+              <Link
                 href="/"
                 className="btn btn-primary btn-sm flex-1 sm:flex-none"
               >
                 <span className="hidden sm:inline">Back to App</span>
                 <span className="sm:hidden">Back</span>
-              </a>
+              </Link>
             </div>
           </div>
         </div>

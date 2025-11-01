@@ -29,8 +29,8 @@ function LoginContent() {
     try {
       await signIn(email, password);
       router.push('/');
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign in. Please check your credentials.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to sign in. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -119,7 +119,7 @@ function LoginContent() {
           <div className="space-y-3 pt-4 border-t border-slate-700/50">
             <div className="text-center">
               <p className="text-slate-400 text-sm">
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
                 <a href="/auth/register" className="text-violet-400 hover:text-violet-300 font-medium transition-colors duration-200">
                   Create one here
                 </a>

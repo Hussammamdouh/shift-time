@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth';
 import { PageLoader } from './LoadingSpinner';
 
 export default function AdminProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, userProfile, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
 
   useEffect(() => {

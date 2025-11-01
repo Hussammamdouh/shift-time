@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { HistoryRec, Snapshot } from '../lib/types';
+import type { Snapshot } from '../lib/types';
 import { hoursToText } from '../lib/timeUtils';
 import { formatCurrency } from '../lib/dashboard';
 
@@ -169,7 +169,7 @@ export default function AdvancedReports({ snap }: AdvancedReportsProps) {
                 </tr>
               </thead>
               <tbody>
-                {weeklyData.map((week, idx) => {
+                {weeklyData.map((week) => {
                   const date = new Date(week.week);
                   return (
                     <tr key={week.week} className="border-b border-slate-700/30 hover:bg-slate-800/30">

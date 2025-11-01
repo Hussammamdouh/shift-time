@@ -69,13 +69,12 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
     };
   };
 
-  // Calculate stats for all shifts (original) and filtered shifts
+  // Calculate stats for all shifts (original) - filtered stats will be calculated after filtering
   const allStats = calculateStats(snap.history);
-  const filteredStats = calculateStats(filteredShifts);
   
   // Helper function to round to 2 decimal places
   const roundToTwo = (num: number) => Math.round(num * 100) / 100;
-  
+
   const hourlyRate = snap.prefs.hourlyRate || 0;
   const overtimeThreshold = snap.prefs.overtimeThreshold || 7;
 
@@ -164,6 +163,9 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
         return 0;
     }
   });
+
+  // Calculate stats for filtered shifts (after filtering and sorting)
+  const filteredStats = calculateStats(filteredShifts);
 
   function openEditModal(shift: HistoryRec) {
     setEditTarget({ kind: 'history', id: shift.id, record: shift });
@@ -569,7 +571,7 @@ export default function ReportTable({ snap, setSnap, onDelete }: Props) {
                 className="input w-full"
                 value={quickFilter}
                 onChange={(e) => {
-                  setQuickFilter(e.target.value as any);
+                  setQuickFilter(e.target.value as 'all' | 'today' | 'week' | 'month' | 'year');
                   setDateRange({ start: '', end: '' }); // Clear custom range when using quick filter
                 }}
               >

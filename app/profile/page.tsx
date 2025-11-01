@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import Link from 'next/link';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { PageLoader } from '@/components/LoadingSpinner';
 import { updateProfile } from 'firebase/auth';
@@ -11,7 +11,6 @@ import { auth, db } from '@/lib/firebase';
 
 function ProfileContent() {
   const { user, userProfile, company } = useAuth();
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -57,8 +56,8 @@ function ProfileContent() {
       setTimeout(() => {
         window.location.reload(); // Reload to get updated profile
       }, 1500);
-    } catch (err: any) {
-      setError(err.message || 'Failed to update profile');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update profile');
     } finally {
       setLoading(false);
     }
@@ -104,16 +103,16 @@ function ProfileContent() {
               </div>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4 w-full sm:w-auto">
-              <a href="/dashboard" className="btn btn-ghost btn-sm flex-1 sm:flex-none">
+              <Link href="/dashboard" className="btn btn-ghost btn-sm flex-1 sm:flex-none">
                 <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
                 Dashboard
-              </a>
-              <a href="/" className="btn btn-secondary btn-sm flex-1 sm:flex-none">
+              </Link>
+              <Link href="/" className="btn btn-secondary btn-sm flex-1 sm:flex-none">
                 <span className="hidden sm:inline">Back to App</span>
                 <span className="sm:hidden">Back</span>
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -240,12 +239,12 @@ function ProfileContent() {
             <div className="mt-8 pt-6 border-t border-slate-700/50 space-y-4">
               <h3 className="text-lg font-semibold text-slate-200">Account Actions</h3>
               
-              <a href="/?tab=settings" className="block w-full btn btn-ghost text-left">
+              <Link href="/?tab=settings" className="block w-full btn btn-ghost text-left">
                 <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                 </svg>
                 Change Password
-              </a>
+              </Link>
             </div>
           </div>
         </div>

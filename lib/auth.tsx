@@ -212,13 +212,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Return the admin email so the caller can redirect to login
       return adminEmail;
-    } catch (error: any) {
+    } catch (error) {
       // Handle specific Firebase errors
-      if (error.code === 'auth/email-already-in-use') {
+      const firebaseError = error as { code?: string; message?: string };
+      if (firebaseError.code === 'auth/email-already-in-use') {
         throw new Error('An account with this email already exists');
-      } else if (error.code === 'auth/invalid-email') {
+      } else if (firebaseError.code === 'auth/invalid-email') {
         throw new Error('Invalid email address');
-      } else if (error.code === 'auth/weak-password') {
+      } else if (firebaseError.code === 'auth/weak-password') {
         throw new Error('Password is too weak. Please use a stronger password');
       }
       throw error;
@@ -256,7 +257,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isAdmin = userProfile?.role === 'admin';
-  const isEmployee = userProfile?.role === 'employee' || (!userProfile?.role && userProfile); // Default to employee if role not set
+  const isEmployee = userProfile?.role === 'employee' || (!userProfile?.role && !!userProfile); // Default to employee if role not set
 
   return (
     <AuthContext.Provider value={{ 

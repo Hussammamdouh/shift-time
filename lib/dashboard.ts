@@ -60,8 +60,8 @@ export async function getCompanyDashboardData(companyId: string): Promise<UserDa
       }
       
       // Calculate totals
-      const totalShifts = snapshot?.history.length || 0;
-      const totalHours = snapshot?.history.reduce((sum, shift) => sum + shift.netMs, 0) / 3600000 || 0;
+      const totalShifts = snapshot?.history?.length || 0;
+      const totalHours = (snapshot?.history?.reduce((sum, shift) => sum + shift.netMs, 0) || 0) / 3600000;
       const hourlyRate = snapshot?.prefs.hourlyRate || 0;
       const totalEarnings = totalHours * hourlyRate;
       
@@ -103,7 +103,7 @@ export function formatCurrency(amount: number, currency: string = 'EGP'): string
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     }).format(amount);
-  } catch (error) {
+  } catch {
     // Fallback for non-standard currency codes
     return `${amount.toFixed(2)} ${currency}`;
   }

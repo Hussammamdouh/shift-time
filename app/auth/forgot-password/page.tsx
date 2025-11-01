@@ -19,8 +19,8 @@ export default function ForgotPasswordPage() {
     try {
       await sendPasswordReset(email);
       setSuccess('Password reset email sent! Check your inbox for instructions.');
-    } catch (err: any) {
-      setError(err.message || 'Failed to send password reset email. Please try again.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send password reset email. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -69,7 +69,7 @@ export default function ForgotPasswordPage() {
                   <div className="flex-1">
                     <p className="font-medium mb-1">{success}</p>
                     <p className="text-xs text-emerald-400">
-                      If you don't see the email, check your spam folder.
+                      If you don&apos;t see the email, check your spam folder.
                     </p>
                   </div>
                 </div>
@@ -115,7 +115,7 @@ export default function ForgotPasswordPage() {
               Back to Sign In
             </a>
             <p className="text-slate-400 text-xs">
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <a href="/auth/register" className="text-violet-400 hover:text-violet-300 font-medium">
                 Create one here
               </a>

@@ -42,7 +42,7 @@ export default function OnboardingFlow({ snap, setSnap }: OnboardingFlowProps) {
       content: (
         <div className="space-y-4">
           <p className="text-slate-300">
-            As an admin, you can manage your company, add employees, and track everyone's time.
+            As an admin, you can manage your company, add employees, and track everyone&apos;s time.
           </p>
           <div className="space-y-2">
             <div className="flex items-start space-x-3 p-3 bg-slate-800/50 rounded-lg">
@@ -84,9 +84,9 @@ export default function OnboardingFlow({ snap, setSnap }: OnboardingFlowProps) {
             Start tracking your work hours using the stopwatch:
           </p>
           <ol className="space-y-3 list-decimal list-inside text-slate-300">
-            <li>Click "Start" to begin tracking</li>
-            <li>Click "Break" when taking breaks</li>
-            <li>Click "End" when done with your shift</li>
+            <li>Click &quot;Start&quot; to begin tracking</li>
+            <li>Click &quot;Break&quot; when taking breaks</li>
+            <li>Click &quot;End&quot; when done with your shift</li>
             <li>Add notes and tags for better organization</li>
           </ol>
           <div className="p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg">
@@ -148,7 +148,7 @@ export default function OnboardingFlow({ snap, setSnap }: OnboardingFlowProps) {
       content: (
         <div className="space-y-4">
           <p className="text-slate-300">
-            You've been added to the company. Let's get you started tracking your time!
+            You&apos;ve been added to the company. Let&apos;s get you started tracking your time!
           </p>
           <div className="space-y-2">
             <div className="flex items-start space-x-3 p-3 bg-slate-800/50 rounded-lg">
@@ -190,11 +190,11 @@ export default function OnboardingFlow({ snap, setSnap }: OnboardingFlowProps) {
             Follow these simple steps:
           </p>
           <ol className="space-y-3 list-decimal list-inside text-slate-300">
-            <li>Go to the "Stopwatch Dashboard" tab</li>
-            <li>Click "Start" when you begin work</li>
-            <li>Click "Break" when taking a break</li>
-            <li>Click "Back" to return from break</li>
-            <li>Click "End" when you finish your shift</li>
+            <li>Go to the &quot;Stopwatch Dashboard&quot; tab</li>
+            <li>Click &quot;Start&quot; when you begin work</li>
+            <li>Click &quot;Break&quot; when taking a break</li>
+            <li>Click &quot;Back&quot; to return from break</li>
+            <li>Click &quot;End&quot; when you finish your shift</li>
           </ol>
           <div className="p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg">
             <p className="text-sm text-blue-300">
@@ -212,7 +212,7 @@ export default function OnboardingFlow({ snap, setSnap }: OnboardingFlowProps) {
             Check your work history:
           </p>
           <ul className="space-y-2 text-slate-300">
-            <li>• Go to the "Reports & Analytics" tab</li>
+            <li>• Go to the &quot;Reports &amp; Analytics&quot; tab</li>
             <li>• See all your recorded shifts</li>
             <li>• View total hours, breaks, and overtime</li>
             <li>• Add notes and tags for organization</li>

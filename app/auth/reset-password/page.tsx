@@ -60,8 +60,8 @@ function ResetPasswordContent() {
       setTimeout(() => {
         router.push('/auth/login');
       }, 2000);
-    } catch (err: any) {
-      setError(err.message || 'Failed to reset password. The link may have expired. Please request a new one.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reset password. The link may have expired. Please request a new one.');
     } finally {
       setLoading(false);
     }
